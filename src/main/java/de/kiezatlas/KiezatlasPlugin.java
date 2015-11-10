@@ -1,15 +1,14 @@
 package de.kiezatlas;
 
-import de.kiezatlas.service.KiezatlasService;
-
-import de.deepamehta.plugins.accesscontrol.service.AccessControlService;
-import de.deepamehta.plugins.geomaps.service.GeomapsService;
+import de.deepamehta.plugins.accesscontrol.AccessControlService;
+import de.deepamehta.plugins.geomaps.GeomapsService;
 import de.deepamehta.plugins.facets.model.FacetValue;
-import de.deepamehta.plugins.facets.service.FacetsService;
+import de.deepamehta.plugins.facets.FacetsService;
 
 import de.deepamehta.core.AssociationDefinition;
 import de.deepamehta.core.RelatedTopic;
 import de.deepamehta.core.Topic;
+import de.deepamehta.core.model.RelatedTopicModel;
 import de.deepamehta.core.model.TopicModel;
 import de.deepamehta.core.model.SimpleValue;
 import de.deepamehta.core.osgi.PluginActivator;
@@ -260,7 +259,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
                 FacetValue value = new FacetValue(childTypeUri).put(facetValue);
                 facetsService.updateFacet(geoObject, facetTypeUri, value);
             } else {
-                List<TopicModel> facetValues = newModel.getChildTopicsModel().getTopics(childTypeUri);
+                List<RelatedTopicModel> facetValues = newModel.getChildTopicsModel().getTopics(childTypeUri);
                 logger.info("### Storing facets of type \"" + facetTypeUri + "\" for geo object " + geoObject.getId() +
                     " (facetValues=" + facetValues + ")");
                 FacetValue value = new FacetValue(childTypeUri).put(facetValues);
@@ -308,7 +307,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     private List<Topic> fetchGeoObjects(long geomapId) {
-        List<Topic> geoObjects = new ArrayList();
+        List<Topic> geoObjects = new ArrayList<Topic>();
         for (TopicModel geoCoord : geomapsService.getGeomap(geomapId)) {
             Topic geoObject = geomapsService.getDomainTopic(geoCoord.getId());
             geoObjects.add(geoObject);
