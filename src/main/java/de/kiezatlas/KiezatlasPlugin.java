@@ -2,6 +2,7 @@ package de.kiezatlas;
 
 import de.deepamehta.plugins.accesscontrol.AccessControlService;
 import de.deepamehta.plugins.geomaps.GeomapsService;
+import de.deepamehta.plugins.workspaces.WorkspacesService;
 import de.deepamehta.plugins.facets.model.FacetValue;
 import de.deepamehta.plugins.facets.FacetsService;
 
@@ -59,6 +60,12 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     @Inject
     private FacetsService facetsService;
+
+    @Inject
+    private WorkspacesService workspaceService;
+
+    @Inject
+    private AccessControlService accessControlService;
 
     // ### FIXME: must *wait* for the Access Control service but don't actually *consume* it.
     // This ensures the Kiezatlas types are properly setup for Access Control. ### Still required?
