@@ -67,9 +67,6 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Inject
     private AccessControlService accessControlService;
 
-    // ### FIXME: must *wait* for the Access Control service but don't actually *consume* it.
-    // This ensures the Kiezatlas types are properly setup for Access Control. ### Still required?
-
     private Logger logger = Logger.getLogger(getClass().getName());
 
     // -------------------------------------------------------------------------------------------------- Public Methods
