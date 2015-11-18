@@ -9,6 +9,11 @@ import de.deepamehta.core.service.accesscontrol.SharingMode;
 import de.deepamehta.plugins.accesscontrol.AccessControlService;
 import de.deepamehta.plugins.workspaces.WorkspacesService;
 
+/**
+ * Introduces the Public "Kiezatlas" Workspace.
+ * Home of all Kiezatlas related Topic Types.
+ * Also home of all Facet, Category Types and Categories introduced with dm4-kiezatlas-etl.
+ * */
 
 public class Migration3 extends Migration {
 
