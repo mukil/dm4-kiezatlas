@@ -17,8 +17,8 @@ import de.deepamehta.plugins.workspaces.WorkspacesService;
 
 public class Migration5 extends Migration {
 
-    static final String REPORTS_WORKSPACE_NAME = "Reports";
-    static final String REPORTS_WORKSPACE_URI = "de.kiezatlas.reports_ws";
+    static final String REPORTS_WORKSPACE_NAME = "Reporting";
+    static final String REPORTS_WORKSPACE_URI = "de.kiezatlas.reporting_ws";
     static final SharingMode REPORTS_WORKSPACE_SHARING_MODE = SharingMode.CONFIDENTIAL;
 
     @Inject
