@@ -15,17 +15,15 @@ import de.deepamehta.core.model.SimpleValue;
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Cookies;
 import de.deepamehta.core.service.Inject;
+import de.deepamehta.core.service.Transactional;
 import de.deepamehta.core.service.ResultList;
 import de.deepamehta.core.service.event.PostUpdateTopicListener;
 import de.deepamehta.core.service.event.PreSendTopicListener;
 import de.deepamehta.core.util.DeepaMehtaUtils;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.Consumes;
+import javax.ws.rs.*;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.MediaType;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -44,6 +42,12 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     private static final String TYPE_URI_GEO_OBJECT      = "ka2.geo_object";
     private static final String TYPE_URI_GEO_OBJECT_NAME = "ka2.geo_object.name";
+
+    // The URIs of KA2 Geo Object topics have this prefix.
+    // The remaining part of the URI is the original KA1 topic id.
+    private static final String KA2_GEO_OBJECT_URI_PREFIX = "de.kiezatlas.topic.";
+    private static final String GEO_OBJECT_OWNER_PROPERTY = "de.kiezatlas.owner";
+    private static final String GEO_OBJECT_KEYWORD_PROPERTY = "de.kiezatlas.key.";
 
     // Website-Geomap association
     private static final String WEBSITE_GEOMAP = "dm4.core.association";
@@ -138,7 +142,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Override
     public List<RelatedTopic> getGeoObjectsByCategory(@PathParam("id") long categoryId) {
         return dms.getTopic(categoryId).getRelatedTopics("dm4.core.aggregation", "dm4.core.child", "dm4.core.parent",
-            TYPE_URI_GEO_OBJECT, 0).getItems();
+                TYPE_URI_GEO_OBJECT, 0).getItems();
     }
 
     @GET
@@ -151,6 +155,34 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         }
         return result;
     }
+
+    /** @PUT
+    @Path("/geoobject/attribution/{topicId}/{owner}")
+    @Transactional
+    @Consumes(MediaType.TEXT_PLAIN)
+    public Response createGeoObjectAttribution(@PathParam("topicId") long id, @PathParam("owner") String owner,
+                                               String key) {
+        Topic geoObject = dms.getTopic(id);
+        if (geoObject != null && !owner.isEmpty() && !key.isEmpty()) {
+            String value = owner.trim();
+            String keyValue = key.trim();
+            try {
+                String existingValue = (String) geoObject.getProperty(GEO_OBJECT_OWNER_PROPERTY);
+                logger.warning("Values already set: Updating not allowed, owner=" + existingValue);
+                return Response.status(405).build();
+            } catch (Exception e) {  // ### org.neo4j.graphdb.NotFoundException
+                geoObject.setProperty(GEO_OBJECT_OWNER_PROPERTY, value, true); // ### addToIndex=true?
+                geoObject.setProperty(GEO_OBJECT_KEYWORD_PROPERTY, keyValue, false);
+                logger.info("### Equipped \"" + geoObject.getSimpleValue() + "\" with owner=\"" + owner + "\" and " +
+                        "key=\"" + key + "\"");
+                return Response.status(200).build();
+            }
+        } else if (owner.isEmpty()){
+            logger.warning("Owner and/or key empty - Not allowed");
+            return Response.status(405).build();
+        }
+        return Response.status(404).build();
+    } **/
 
     @GET
     @Path("/category/objects")

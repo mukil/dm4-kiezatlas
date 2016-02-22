@@ -1,6 +1,5 @@
 package de.kiezatlas.migrations;
 
-import de.deepamehta.core.model.IndexMode;
 import de.deepamehta.core.service.Inject;
 import de.deepamehta.core.service.Migration;
 import de.deepamehta.core.TopicType;
@@ -10,7 +9,7 @@ import de.deepamehta.plugins.accesscontrol.AccessControlService;
 import de.deepamehta.plugins.workspaces.WorkspacesService;
 
 /**
- * Introduces the Public "Kiezatlas" Workspace.
+ * Introduces the Public "Kiezatlas" Workspace (as of 4.7).
  * Home of all Kiezatlas related Topic Types.
  * Also home of all Facet, Category Types and Categories introduced with dm4-kiezatlas-etl.
  * */
