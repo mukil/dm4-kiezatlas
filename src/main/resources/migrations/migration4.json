@@ -1,0 +1,9 @@
+{
+    "topic_types": [
+        {
+            "value":           "Needs Update",
+            "uri":             "ka2.geo_object.needs_update",
+            "data_type_uri":   "dm4.core.boolean"
+        }
+    ]
+}
