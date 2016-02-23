@@ -11,15 +11,12 @@ import de.deepamehta.plugins.workspaces.WorkspacesService;
 
 /**
  * Introduces the Public "Reports" Workspace (as of 4.7).
- * Home of all Kiezatlas related Topic Types.
- * Also home of all Facet, Category Types and Categories introduced with dm4-kiezatlas-etl.
- * */
-
+ **/
 public class Migration5 extends Migration {
 
     static final String REPORTS_WORKSPACE_NAME = "Reporting";
     static final String REPORTS_WORKSPACE_URI = "de.kiezatlas.reporting_ws";
-    static final SharingMode REPORTS_WORKSPACE_SHARING_MODE = SharingMode.CONFIDENTIAL;
+    static final SharingMode REPORTS_WORKSPACE_SHARING_MODE = SharingMode.PUBLIC;
 
     @Inject
     private WorkspacesService workspaceService;
