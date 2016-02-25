@@ -4,6 +4,36 @@
             "value":           "Needs Update",
             "uri":             "ka2.geo_object.needs_update",
             "data_type_uri":   "dm4.core.boolean"
+        },
+        {
+            "value":           "Reported Note",
+            "uri":             "ka2.geo_object.note_reported",
+            "data_type_uri":   "dm4.core.text"
+        },
+        {
+            "value":           "Reporting",
+            "uri":             "ka2.geo_object.reporting",
+            "data_type_uri":   "dm4.core.composite",
+            "assoc_defs": [
+                {
+                    "child_type_uri":        "ka2.geo_object.note_reported",
+                    "child_cardinality_uri": "dm4.core.one",
+                    "assoc_type_uri":        "dm4.core.composition_def"
+                },
+                {
+                    "child_type_uri":        "ka2.geo_object.needs_update",
+                    "child_cardinality_uri": "dm4.core.one",
+                    "assoc_type_uri":        "dm4.core.composition_def"
+                }
+            ],
+            "view_config_topics": [
+                {
+                    "type_uri": "dm4.webclient.view_config",
+                    "childs": {
+                        "dm4.webclient.show_in_create_menu": false
+                    }
+                }
+            ]
         }
     ]
 }

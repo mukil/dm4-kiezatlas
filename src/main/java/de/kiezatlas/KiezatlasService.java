@@ -40,6 +40,10 @@ public interface KiezatlasService {
      */
     List<RelatedTopic> getGeoObjectsByCategory(long categoryId);
 
+    boolean hasKiezatlasWorkspaceMembership();
+
+    boolean hasReportingWorkspaceMembership();
+
     /**
      * Searches for Geo Objects whose name match the search term (case-insensitive substring search).
      *

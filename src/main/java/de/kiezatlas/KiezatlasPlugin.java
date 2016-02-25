@@ -49,6 +49,11 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     private static final String GEO_OBJECT_OWNER_PROPERTY = "de.kiezatlas.owner";
     private static final String GEO_OBJECT_KEYWORD_PROPERTY = "de.kiezatlas.key.";
 
+    // Workspaces
+    private static final String REPORTING_WORKSPACE_URI = "de.kiezatlas.reporting_ws";
+    private static final String KIEZATLAS_WORKSPACE_URI = "de.kiezatlas.workspace";
+
+
     // Website-Geomap association
     private static final String WEBSITE_GEOMAP = "dm4.core.association";
     private static final String ROLE_TYPE_WEBSITE = "dm4.core.default";     // Note: used for both associations
@@ -198,7 +203,31 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         return result;
     }
 
+    @GET
+    @Path("/membership/kiezatlas")
+    @Override
+    public boolean hasKiezatlasWorkspaceMembership() {
+        String username = accessControlService.getUsername();
+        if (!username.equals("")) {
+            Topic ws = workspaceService.getWorkspace(KIEZATLAS_WORKSPACE_URI);
+            logger.info("Checking Kiezatlas Membership for Username=" + username);
+            return accessControlService.isMember(username, ws.getId());
+        }
+        return false;
+    }
 
+    @GET
+    @Path("/membership/reporting")
+    @Override
+    public boolean hasReportingWorkspaceMembership() {
+        String username = accessControlService.getUsername();
+        if (!username.equals("")) {
+            Topic ws = workspaceService.getWorkspace(REPORTING_WORKSPACE_URI);
+            logger.info("Checking Reporting Membership for Username=" + username);
+            return accessControlService.isMember(username, ws.getId());
+        }
+        return false;
+    }
 
     // ********************************
     // *** Listener Implementations ***
