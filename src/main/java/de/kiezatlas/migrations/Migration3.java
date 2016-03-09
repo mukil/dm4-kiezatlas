@@ -10,6 +10,7 @@ import de.deepamehta.plugins.workspaces.WorkspacesService;
 
 /**
  * Introduces the Public "Kiezatlas" Workspace (as of 4.7).
+ * Assigns all our topic types to the "Kiezatlas" workspace so members can edit these type definitions
  * Home of all Kiezatlas related Topic Types.
  * Also home of all Facet, Category Types and Categories introduced with dm4-kiezatlas-etl.
  * */
@@ -31,8 +32,6 @@ public class Migration3 extends Migration {
         Topic kiezatlas = workspaceService.createWorkspace(KIEZATLAS_WORKSPACE_NAME, KIEZATLAS_WORKSPACE_URI,
                 KIEZATLAS_WORKSPACE_SHARING_MODE);
         accessControlService.setWorkspaceOwner(kiezatlas, "admin");
-        // Assign all our topic types to the "System" workspace so "admin" can edit these definitions
-        // Topic system = workspaceService.getWorkspace(accessControlService.SYSTEM_WORKSPACE_URI);
         TopicType geoObject = dms.getTopicType("ka2.geo_object");
         TopicType geoObjectName = dms.getTopicType("ka2.geo_object.name");
         TopicType website = dms.getTopicType("ka2.website");
