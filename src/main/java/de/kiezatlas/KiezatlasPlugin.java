@@ -1,31 +1,29 @@
 package de.kiezatlas;
 
-import de.kiezatlas.service.KiezatlasService;
-
-import de.deepamehta.plugins.accesscontrol.service.AccessControlService;
-import de.deepamehta.plugins.geomaps.service.GeomapsService;
+import de.deepamehta.plugins.accesscontrol.AccessControlService;
+import de.deepamehta.plugins.geomaps.GeomapsService;
+import de.deepamehta.plugins.workspaces.WorkspacesService;
 import de.deepamehta.plugins.facets.model.FacetValue;
-import de.deepamehta.plugins.facets.service.FacetsService;
+import de.deepamehta.plugins.facets.FacetsService;
 
 import de.deepamehta.core.AssociationDefinition;
 import de.deepamehta.core.RelatedTopic;
 import de.deepamehta.core.Topic;
+import de.deepamehta.core.model.RelatedTopicModel;
 import de.deepamehta.core.model.TopicModel;
 import de.deepamehta.core.model.SimpleValue;
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Cookies;
 import de.deepamehta.core.service.Inject;
+import de.deepamehta.core.service.Transactional;
 import de.deepamehta.core.service.ResultList;
 import de.deepamehta.core.service.event.PostUpdateTopicListener;
 import de.deepamehta.core.service.event.PreSendTopicListener;
 import de.deepamehta.core.util.DeepaMehtaUtils;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.Consumes;
+import javax.ws.rs.*;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.MediaType;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -45,6 +43,12 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     private static final String TYPE_URI_GEO_OBJECT      = "ka2.geo_object";
     private static final String TYPE_URI_GEO_OBJECT_NAME = "ka2.geo_object.name";
 
+    // The URIs of KA2 Geo Object topics have this prefix.
+    // The remaining part of the URI is the original KA1 topic id.
+    private static final String KA2_GEO_OBJECT_URI_PREFIX = "de.kiezatlas.topic.";
+    private static final String GEO_OBJECT_OWNER_PROPERTY = "de.kiezatlas.owner";
+    private static final String GEO_OBJECT_KEYWORD_PROPERTY = "de.kiezatlas.key.";
+
     // Website-Geomap association
     private static final String WEBSITE_GEOMAP = "dm4.core.association";
     private static final String ROLE_TYPE_WEBSITE = "dm4.core.default";     // Note: used for both associations
@@ -61,8 +65,11 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Inject
     private FacetsService facetsService;
 
-    // ### FIXME: must *wait* for the Access Control service but don't actually *consume* it.
-    // This ensures the Kiezatlas types are properly setup for Access Control. ### Still required?
+    @Inject
+    private WorkspacesService workspaceService;
+
+    @Inject
+    private AccessControlService accessControlService;
 
     private Logger logger = Logger.getLogger(getClass().getName());
 
@@ -135,7 +142,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Override
     public List<RelatedTopic> getGeoObjectsByCategory(@PathParam("id") long categoryId) {
         return dms.getTopic(categoryId).getRelatedTopics("dm4.core.aggregation", "dm4.core.child", "dm4.core.parent",
-            TYPE_URI_GEO_OBJECT, 0).getItems();
+                TYPE_URI_GEO_OBJECT, 0).getItems();
     }
 
     @GET
@@ -148,6 +155,34 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         }
         return result;
     }
+
+    /** @PUT
+    @Path("/geoobject/attribution/{topicId}/{owner}")
+    @Transactional
+    @Consumes(MediaType.TEXT_PLAIN)
+    public Response createGeoObjectAttribution(@PathParam("topicId") long id, @PathParam("owner") String owner,
+                                               String key) {
+        Topic geoObject = dms.getTopic(id);
+        if (geoObject != null && !owner.isEmpty() && !key.isEmpty()) {
+            String value = owner.trim();
+            String keyValue = key.trim();
+            try {
+                String existingValue = (String) geoObject.getProperty(GEO_OBJECT_OWNER_PROPERTY);
+                logger.warning("Values already set: Updating not allowed, owner=" + existingValue);
+                return Response.status(405).build();
+            } catch (Exception e) {  // ### org.neo4j.graphdb.NotFoundException
+                geoObject.setProperty(GEO_OBJECT_OWNER_PROPERTY, value, true); // ### addToIndex=true?
+                geoObject.setProperty(GEO_OBJECT_KEYWORD_PROPERTY, keyValue, false);
+                logger.info("### Equipped \"" + geoObject.getSimpleValue() + "\" with owner=\"" + owner + "\" and " +
+                        "key=\"" + key + "\"");
+                return Response.status(200).build();
+            }
+        } else if (owner.isEmpty()){
+            logger.warning("Owner and/or key empty - Not allowed");
+            return Response.status(405).build();
+        }
+        return Response.status(404).build();
+    } **/
 
     @GET
     @Path("/category/objects")
@@ -260,7 +295,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
                 FacetValue value = new FacetValue(childTypeUri).put(facetValue);
                 facetsService.updateFacet(geoObject, facetTypeUri, value);
             } else {
-                List<TopicModel> facetValues = newModel.getChildTopicsModel().getTopics(childTypeUri);
+                List<RelatedTopicModel> facetValues = newModel.getChildTopicsModel().getTopics(childTypeUri);
                 logger.info("### Storing facets of type \"" + facetTypeUri + "\" for geo object " + geoObject.getId() +
                     " (facetValues=" + facetValues + ")");
                 FacetValue value = new FacetValue(childTypeUri).put(facetValues);
@@ -308,7 +343,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     private List<Topic> fetchGeoObjects(long geomapId) {
-        List<Topic> geoObjects = new ArrayList();
+        List<Topic> geoObjects = new ArrayList<Topic>();
         for (TopicModel geoCoord : geomapsService.getGeomap(geomapId)) {
             Topic geoObject = geomapsService.getDomainTopic(geoCoord.getId());
             geoObjects.add(geoObject);
