@@ -9,8 +9,8 @@ var administration = (function($) {
     var items =  []
 
     /** Functions */
-    api.load_geo_objects = function(callback) {
-        $.ajax('/site/einrichtungen', {
+    api.load_geo_objects = function(id, callback) {
+        $.ajax('/site/einrichtungen/' + id, {
             type: "GET",
             error: function(e) {
                 console.warn("AJAX POST Error", e)
@@ -28,21 +28,26 @@ var administration = (function($) {
     }
 
     api.render_list = function() {
-        var $listing = $('#listing')
-        if ($listing.children().length === 0) {
-            $listing = $('<ul class="soziale-einrichtungen">')
-        }
-        $listing.empty()
+        var $listing = $('#listing .soziale-einrichtungen')
+            $listing.empty()
         for (var aidx in items) {
             var item = items[aidx]
             $listing.append('<li><div class="list-item">' + item.value + "</div></li>")
-            console.log("Einrichtung", item)
+            // console.log("Einrichtung", item)
         }
     }
 
-    api.render_page = function(stats) {
-        if (status)
-            api.load_geo_objects(api.render_list())
+    api.render_menu = function(status) {
+        if (status) {
+            $('.login').remove()
+        }
+    }
+
+    api.render_page = function(status) {
+        if (status) {
+            api.load_geo_objects(7275, api.render_list)
+            administration.render_menu(status)
+        }
         console.log("Render Page", status)
     }
     

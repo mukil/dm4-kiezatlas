@@ -169,10 +169,16 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     @GET
-    @Path("/einrichtungen")
-    public ResultList<RelatedTopic> getSiteInstitutions() {
+    @Path("/einrichtungen/{id}")
+    public List<RelatedTopic> getSiteInstitutions(@PathParam("id") long topicId) {
+        logger.info("Started fetching institutions related to TopicID=" + topicId);
         ResultList<RelatedTopic> insts = dms.getTopics(TYPE_URI_GEO_OBJECT, 0);
-        return insts;
+        List<RelatedTopic> results = new ArrayList<RelatedTopic>();
+        for (RelatedTopic inst : insts.getItems()) {
+            RelatedTopic bezirk = inst.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent", "dm4.core.child", "ka2.bezirk");
+            if (bezirk != null && bezirk.getId() == topicId) results.add(inst);
+        }
+        return results;
     }
 
     /** @PUT
@@ -339,14 +345,14 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     private ResultList<RelatedTopic> getFacetTypes() {
         Cookies cookies = Cookies.get();
         if (!cookies.has("dm4_topicmap_id")) {
-            logger.info("### Finding geo object facet types ABORTED -- topicmap is unknown (no \"dm4_topicmap_id\" " +
+            logger.fine("### Finding geo object facet types ABORTED -- topicmap is unknown (no \"dm4_topicmap_id\" " +
                 "cookie was sent)");
             return null;
         }
         //
         long topicmapId = cookies.getLong("dm4_topicmap_id");
         if (!isGeomap(topicmapId)) {
-            logger.info("### Finding geo object facet types for topicmap " + topicmapId + " ABORTED -- not a geomap");
+            logger.fine("### Finding geo object facet types for topicmap " + topicmapId + " ABORTED -- not a geomap");
             return null;
         }
         //
