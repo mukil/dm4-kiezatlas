@@ -171,12 +171,13 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @GET
     @Path("/einrichtungen/{id}")
     public List<RelatedTopic> getSiteInstitutions(@PathParam("id") long topicId) {
-        logger.info("Started fetching institutions related to TopicID=" + topicId);
-        ResultList<RelatedTopic> insts = dms.getTopics(TYPE_URI_GEO_OBJECT, 0);
+        logger.info("Started fetching Geo Objects related to TopicID=" + topicId);
         List<RelatedTopic> results = new ArrayList<RelatedTopic>();
-        for (RelatedTopic inst : insts.getItems()) {
-            RelatedTopic bezirk = inst.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent", "dm4.core.child", "ka2.bezirk");
-            if (bezirk != null && bezirk.getId() == topicId) results.add(inst);
+        Topic superTopic = dms.getTopic(topicId);
+        ResultList<RelatedTopic> geoObjects = superTopic.getRelatedTopics("dm4.core.aggregation",
+            "dm4.core.child", "dm4.core.parent", "ka2.geo_object", 0);
+        for (RelatedTopic geoObject : geoObjects) {
+            results.add(geoObject);
         }
         return results;
     }
