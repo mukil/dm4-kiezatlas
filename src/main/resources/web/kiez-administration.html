@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Kiezatlas 2 Bezirks-Administration</title>
+
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0"/>
+
+        <link rel="stylesheet" href="/de.kiezatlas.website/vendor/jquery/ui/css/kiezatlas/jquery-ui-1.9.2.custom.min.css"/>
+        <link rel="stylesheet" href="/de.kiezatlas.website/css/sitestyle.css"/>
+
+        <script src="/de.kiezatlas.website/vendor/jquery/jquery-1.9.1.min.js"></script>
+        <script src="/de.kiezatlas.website/vendor/jquery/ui/js/jquery-ui-1.9.2.custom.min.js"></script>
+        <script src="/de.kiezatlas.website/ka-restclient.js"></script>
+        <script src="/de.kiezatlas/ka-administration.js"></script>
+        <script src="/de.deepamehta.accesscontrol/script/vendor/sha256.js"></script>
+
+        <script type="text/javascript">
+
+            // App initialization
+            $(document).ready(function(e) {
+                // render user menu
+                restc.is_logged_in(function(response) {
+                    administration.render_page(response)
+                })
+            })
+
+        </script>
+    </head>
+    <body class="kiezatlas">
+
+        <div id="navigation">
+            <ul>
+                <li class="login"><a href="/sign-up/login">Anmelden</a></li>
+                <li class="angebote"><a href="/kiezatlas/administration/">Alle Einrichtungen</a></li>
+                <li class="logout"><a href="/#logout/" onclick="javascript:restc.logout()">Abmelden</a></li>
+            </ul>
+        </div>
+        
+        <div id="header">
+            <div class="welcome">
+                <img src="/de.kiezatlas.website/images/kiezatlas2-logo.png" width="150" />
+                <h3>Hi, <span class="username"></span></h3>
+            </div>
+        </div>
+
+        <div id="filter-container"></div>
+
+        <div id="listing"></div>
+
+        <!-- Notification area -->
+        <div id="notification" onclick="javascript:kiezatlas.close_message_window()">
+            <span class="message">Hi!</span>
+            <!-- a href="javascript:kiezatlas.close_message_window()">(x)</a-->
+        </div>
+
+        <!-- Piwik
+        <script type="text/javascript">
+        var pkBaseURL = "//stats.infokitchen.net/";
+        document.write(unescape("%3Cscript src='" + pkBaseURL + "piwik.js' type='text/javascript'%3E%3C/script%3E"));
+        </script><script type="text/javascript">
+        try {
+        var piwikTracker = Piwik.getTracker(pkBaseURL + "piwik.php", 2);
+        piwikTracker.trackPageView();
+        piwikTracker.enableLinkTracking();
+        } catch( err ) {}
+        </script>
+        <noscript>
+            <img src="https://stats.infokitchen.net/piwik.php?idsite=2&rec=1&action_name=Kiezatlas+2+Website" style="border:0" alt="" />
+        </noscript>
+        <!-- End Piwik Tracking Code -->
+
+    </body>
+</html>
+

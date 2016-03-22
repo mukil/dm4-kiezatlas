@@ -46,7 +46,7 @@ public interface KiezatlasService {
      * @param   clock   The logical clock value send back to the client (contained in GeoObjects).
      *                  Allows the client to order asynchronous responses.
      */
-    GeoObjects searchGeoObjects(String searchTerm, long clock);
+    GeoObjects searchGeoObjectNames(String searchTerm, long clock);
 
     /**
      * Searches for categories that match the search term (case-insensitive substring search)

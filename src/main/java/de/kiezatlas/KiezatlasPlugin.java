@@ -15,20 +15,20 @@ import de.deepamehta.core.model.SimpleValue;
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Cookies;
 import de.deepamehta.core.service.Inject;
-import de.deepamehta.core.service.Transactional;
 import de.deepamehta.core.service.ResultList;
 import de.deepamehta.core.service.event.PostUpdateTopicListener;
 import de.deepamehta.core.service.event.PreSendTopicListener;
 import de.deepamehta.core.util.DeepaMehtaUtils;
+import java.io.InputStream;
 
 import javax.ws.rs.*;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.MediaType;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 
 
@@ -76,6 +76,18 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     // -------------------------------------------------------------------------------------------------- Public Methods
 
 
+
+    /**
+     * Responds with the main menu for the Kiezatlas Website at Resource /kiezatlas/.
+     */
+    @GET
+    @Path("/administration")
+    @Produces(MediaType.TEXT_HTML)
+    public InputStream getKiezatlasAdministrationPage() {
+        String username = accessControlService.getUsername();
+        if (username != null && !username.equals("admin")) throw new WebApplicationException(Response.Status.UNAUTHORIZED);
+        return getStaticResource("web/kiez-administration.html");
+    }
 
     // **********************
     // *** Plugin Service ***
@@ -148,12 +160,19 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @GET
     @Path("/geoobject")
     @Override
-    public GeoObjects searchGeoObjects(@QueryParam("search") String searchTerm, @QueryParam("clock") long clock) {
+    public GeoObjects searchGeoObjectNames(@QueryParam("search") String searchTerm, @QueryParam("clock") long clock) {
         GeoObjects result = new GeoObjects(clock);
         for (Topic geoObjectName : dms.searchTopics("*" + searchTerm + "*", TYPE_URI_GEO_OBJECT_NAME)) {
             result.add(getGeoObject(geoObjectName));
         }
         return result;
+    }
+
+    @GET
+    @Path("/einrichtungen")
+    public ResultList<RelatedTopic> getSiteInstitutions() {
+        ResultList<RelatedTopic> insts = dms.getTopics(TYPE_URI_GEO_OBJECT, 0);
+        return insts;
     }
 
     /** @PUT
