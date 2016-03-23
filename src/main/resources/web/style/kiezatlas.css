@@ -1,5 +1,41 @@
+
 #ka-showall-button {
     position: absolute;
     right: 0;
     z-index: 1;
+}
+
+#listing {
+    position: relative;
+    top: 30px;
+}
+
+.soziale-einrichtungen {
+    max-width: 70%;
+    padding-left: 15px;
+}
+
+ul.soziale-einrichtungen li {
+    list-style-type: none;
+}
+
+.soziale-einrichtungen .list-item {
+    background: #fff;
+    padding: 15px;
+    border: 1px solid #002856;
+    cursor: pointer;
+    margin: 5px;
+}
+
+.soziale-einrichtungen .list-item h3,
+.soziale-einrichtungen .list-item p {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+.soziale-einrichtungen .list-item:hover {
+    box-shadow: 2px 2px 2px 0px #a9a9a9;
+}
+.soziale-einrichtungen .list-item.selected {
+    box-shadow: 3px 3px 2px 0px #a9a9a9;
 }

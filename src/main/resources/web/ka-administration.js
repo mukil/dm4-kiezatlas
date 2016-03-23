@@ -32,7 +32,8 @@ var administration = (function($) {
             $listing.empty()
         for (var aidx in items) {
             var item = items[aidx]
-            $listing.append('<li><div class="list-item">' + item.value + "</div></li>")
+            $listing.append('<li><div class="list-item"><h3>' + item.value +'</h3>'
+                    + '<p><span class="label">' + new Date(item.childs["dm4.time.modified"].value) +'</span></p></div></li>')
             // console.log("Einrichtung", item)
         }
     }

@@ -177,6 +177,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         ResultList<RelatedTopic> geoObjects = superTopic.getRelatedTopics("dm4.core.aggregation",
             "dm4.core.child", "dm4.core.parent", "ka2.geo_object", 0);
         for (RelatedTopic geoObject : geoObjects) {
+            geoObject.loadChildTopics();
             results.add(geoObject);
         }
         return results;
