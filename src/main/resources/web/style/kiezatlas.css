@@ -5,9 +5,43 @@
     z-index: 1;
 }
 
+.administration #header {
+    display: inline-block;
+    width: 100%;
+}
+
+.administration #header .welcome {
+    max-width: 100%;
+}
+
+.administration .district-links {
+    margin-top: 15px;
+}
+
+a.button {
+    background-color: #fff;
+    display: inline-block;
+    padding: 7px;
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-right: 15px;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+    text-decoration-color: #8f1414;
+}
+
+a.button.selected {
+    background-color: #C0BBBB;
+    color: #fff;
+}
+
 #listing {
     position: relative;
     top: 30px;
+    padding-bottom: 30px;
 }
 
 .soziale-einrichtungen {
@@ -33,9 +67,33 @@ ul.soziale-einrichtungen li {
     margin-bottom: 0px;
 }
 
+.soziale-einrichtungen .label {
+    color: #a9a9a9;
+}
+
 .soziale-einrichtungen .list-item:hover {
     box-shadow: 2px 2px 2px 0px #a9a9a9;
 }
 .soziale-einrichtungen .list-item.selected {
     box-shadow: 3px 3px 2px 0px #a9a9a9;
+}
+
+.soziale-einrichtungen .list-item.no-email {
+    background-color: #ef9713;
+}
+
+.soziale-einrichtungen .list-item.no-coordinates,
+.soziale-einrichtungen .list-item.no-email.no-coordinates,
+.soziale-einrichtungen .list-item.no-bezirksregion.no-coordinates,
+.soziale-einrichtungen .list-item.no-email.no-bezirksregion.no-coordinates {
+    background-color: #f00 !important;
+}
+
+.soziale-einrichtungen .list-item.no-bezirksregion,
+.soziale-einrichtungen .list-item.no-email.no-bezirksregion {
+    background-color: #eaef13;
+}
+
+.soziale-einrichtungen .list-item.no-email .label {
+    color: #fff;
 }

@@ -19,6 +19,7 @@ import de.deepamehta.core.service.ResultList;
 import de.deepamehta.core.service.event.PostUpdateTopicListener;
 import de.deepamehta.core.service.event.PreSendTopicListener;
 import de.deepamehta.core.util.DeepaMehtaUtils;
+import de.deepamehta.plugins.geomaps.model.GeoCoordinate;
 import java.io.InputStream;
 
 import javax.ws.rs.*;
@@ -170,17 +171,73 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     @GET
     @Path("/einrichtungen/{id}")
-    public List<RelatedTopic> getSiteInstitutions(@PathParam("id") long topicId) {
-        logger.info("Started fetching Geo Objects related to TopicID=" + topicId);
-        List<RelatedTopic> results = new ArrayList<RelatedTopic>();
+    public List<SocialInstitutionObject> getSiteInstitutions(@PathParam("id") long topicId) {
+        logger.info("Loading Social Institutions related to super Topic " + topicId);
+        List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
         Topic superTopic = dms.getTopic(topicId);
         ResultList<RelatedTopic> geoObjects = superTopic.getRelatedTopics("dm4.core.aggregation",
             "dm4.core.child", "dm4.core.parent", "ka2.geo_object", 0);
+        int missingMailboxes = 0;
         for (RelatedTopic geoObject : geoObjects) {
-            geoObject.loadChildTopics();
-            results.add(geoObject);
+            SocialInstitutionObject institution = new SocialInstitutionObject();
+            Object modified = dms.getProperty(topicId, "dm4.time.modified");
+            Object created = dms.getProperty(topicId, "dm4.time.created");
+            geoObject.loadChildTopics("dm4.contacts.address");
+            RelatedTopic address = geoObject.getChildTopics().getTopic("dm4.contacts.address");
+            Topic contactTopic = getFacettedContactChildTopic(geoObject);
+            String contactValue = "k.A.";
+            boolean missesMailbox = false;
+            if (contactTopic != null) {
+                contactTopic.loadChildTopics();
+                Topic eMail = contactTopic.getChildTopics().getTopic("ka2.kontakt.email");
+                if (eMail != null && !eMail.getSimpleValue().toString().isEmpty()) {
+                    contactValue = eMail.getSimpleValue().toString();
+                } else {
+                    missesMailbox = true;
+                    Topic phone = contactTopic.getChildTopics().getTopic("ka2.kontakt.telefon");
+                    if (phone != null && !phone.getSimpleValue().toString().isEmpty()) {
+                        contactValue = phone.getSimpleValue().toString();
+                    }
+                }
+            }
+            GeoCoordinate coordinates = geomapsService.getGeoCoordinate(address);
+            if (coordinates != null) {
+                institution.setGeoCoordinate(coordinates);
+            } else {
+                institution.addClassification("no-coordinates");
+                logger.warning("> Geo Coordinates unavailable on \"" + geoObject.getSimpleValue().toString() + "\"");
+            }
+            if (missesMailbox) {
+                // logger.info("> Identified missing Email Address at " + geoObject.getSimpleValue().toString());
+                missingMailboxes++;
+                institution.addClassification("no-email");
+            }
+            Topic bezirksregion = getFacettedBezirksregionChildTopic(geoObject);
+            if (bezirksregion == null) {
+                logger.info("> No Bezirksregion set on \"" + geoObject.getSimpleValue().toString() + "\"");
+                institution.addClassification("no-bezirksregion");
+            }
+            institution.setName(geoObject.getSimpleValue().toString());
+            institution.setContact(contactValue);
+            institution.setAddress(address.getSimpleValue().toString());
+            institution.setCreated((Long) created);
+            institution.setLastModified((Long) modified);
+            results.add(institution);
         }
+        logger.info("> Identified " + missingMailboxes +" Geo Objects without an "
+                + "Email-Address in the group of \"" + superTopic.getSimpleValue().toString()
+            + "\" (" + geoObjects.getSize() + ")");
         return results;
+    }
+
+    private Topic getFacettedContactChildTopic(Topic facettedTopic) {
+        return facettedTopic.getRelatedTopic("dm4.core.composition", "dm4.core.parent",
+            "dm4.core.child", "ka2.kontakt");
+    }
+
+    private Topic getFacettedBezirksregionChildTopic(Topic facettedTopic) {
+        return facettedTopic.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent",
+            "dm4.core.child", "ka2.bezirksregion");
     }
 
     /** @PUT
