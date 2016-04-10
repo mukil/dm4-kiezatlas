@@ -2,7 +2,6 @@ package de.kiezatlas;
 
 import de.deepamehta.plugins.accesscontrol.AccessControlService;
 import de.deepamehta.plugins.geomaps.GeomapsService;
-import de.deepamehta.plugins.workspaces.WorkspacesService;
 import de.deepamehta.plugins.facets.model.FacetValue;
 import de.deepamehta.plugins.facets.FacetsService;
 
@@ -20,6 +19,7 @@ import de.deepamehta.core.service.event.PostUpdateTopicListener;
 import de.deepamehta.core.service.event.PreSendTopicListener;
 import de.deepamehta.core.util.DeepaMehtaUtils;
 import de.deepamehta.plugins.geomaps.model.GeoCoordinate;
+import de.deepamehta.plugins.time.TimeService;
 import java.io.InputStream;
 
 import javax.ws.rs.*;
@@ -32,7 +32,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 
-
+/**
+ * Kiezatlas 2 Plugin Service Implementation.
+ * @author jri & mukil
+ */
 @Path("/site")
 @Consumes("application/json")
 @Produces("application/json")
@@ -46,9 +49,9 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     // The URIs of KA2 Geo Object topics have this prefix.
     // The remaining part of the URI is the original KA1 topic id.
-    private static final String KA2_GEO_OBJECT_URI_PREFIX = "de.kiezatlas.topic.";
-    private static final String GEO_OBJECT_OWNER_PROPERTY = "de.kiezatlas.owner";
-    private static final String GEO_OBJECT_KEYWORD_PROPERTY = "de.kiezatlas.key.";
+    // private static final String KA2_GEO_OBJECT_URI_PREFIX = "de.kiezatlas.topic.";
+    // private static final String GEO_OBJECT_OWNER_PROPERTY = "de.kiezatlas.owner";
+    // private static final String GEO_OBJECT_KEYWORD_PROPERTY = "de.kiezatlas.key.";
 
     // Website-Geomap association
     private static final String WEBSITE_GEOMAP = "dm4.core.association";
@@ -60,17 +63,10 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     // ---------------------------------------------------------------------------------------------- Instance Variables
 
-    @Inject
-    private GeomapsService geomapsService;
-
-    @Inject
-    private FacetsService facetsService;
-
-    @Inject
-    private WorkspacesService workspaceService;
-
-    @Inject
-    private AccessControlService accessControlService;
+    @Inject private GeomapsService geomapsService;
+    @Inject private FacetsService facetsService;
+    @Inject private TimeService timeService;
+    @Inject private AccessControlService accessControlService;
 
     private Logger logger = Logger.getLogger(getClass().getName());
 
@@ -79,7 +75,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
 
     /**
-     * Responds with the main menu for the Kiezatlas Website at Resource /kiezatlas/.
+     * Fetches a simple page rendering objects for kiez-administrators.
+     * @return
      */
     @GET
     @Path("/administration")
@@ -89,6 +86,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         if (username != null && !username.equals("admin")) throw new WebApplicationException(Response.Status.UNAUTHORIZED);
         return getStaticResource("web/kiez-administration.html");
     }
+
+
 
     // **********************
     // *** Plugin Service ***
@@ -158,6 +157,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
                 TYPE_URI_GEO_OBJECT, 0).getItems();
     }
 
+    // Todo: Ditch this in favor of new website module
     @GET
     @Path("/geoobject")
     @Override
@@ -170,6 +170,27 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     @GET
+    @Path("/einrichtungen/missing-bezirk")
+    public List<SocialInstitutionObject> getInstitutionsMissingBezirk() {
+        logger.info("Fetching Social Institutions without a BEZIRK assignment");
+        List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
+        List<Topic> topics = dms.getTopics("type_uri", new SimpleValue("ka2.geo_object"));
+        for (Topic geoObject : topics) {
+            SocialInstitutionObject institution = new SocialInstitutionObject();
+            institution.setName(geoObject.getSimpleValue().toString()); // ### load child topic "ka2.geo_object.name"
+            Topic bezirk = getFacettedBezirkChildTopic(geoObject);
+            if (bezirk == null) {
+                logger.warning("> No Bezirk Relation is missing for " + geoObject.getSimpleValue());
+                institution.setCreated(timeService.getCreationTime(geoObject.getId()));
+                institution.setLastModified(timeService.getModificationTime(geoObject.getId()));
+                results.add(institution);
+            }
+        }
+        return results;
+    }
+
+    // Note: Fetch and build up administrative response objects
+    @GET
     @Path("/einrichtungen/{id}")
     public List<SocialInstitutionObject> getSiteInstitutions(@PathParam("id") long topicId) {
         logger.info("Loading Social Institutions related to super Topic " + topicId);
@@ -180,8 +201,6 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         int missingMailboxes = 0;
         for (RelatedTopic geoObject : geoObjects) {
             SocialInstitutionObject institution = new SocialInstitutionObject();
-            Object modified = dms.getProperty(topicId, "dm4.time.modified");
-            Object created = dms.getProperty(topicId, "dm4.time.created");
             geoObject.loadChildTopics("dm4.contacts.address");
             RelatedTopic address = geoObject.getChildTopics().getTopic("dm4.contacts.address");
             Topic contactTopic = getFacettedContactChildTopic(geoObject);
@@ -205,7 +224,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
                 institution.setGeoCoordinate(coordinates);
             } else {
                 institution.addClassification("no-coordinates");
-                logger.warning("> Geo Coordinates unavailable on \"" + geoObject.getSimpleValue().toString() + "\"");
+                logger.info("> Geo Coordinates unavailable on \"" + geoObject.getSimpleValue().toString() + "\", Address: " + address.getSimpleValue());
             }
             if (missesMailbox) {
                 // logger.info("> Identified missing Email Address at " + geoObject.getSimpleValue().toString());
@@ -214,14 +233,14 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             }
             Topic bezirksregion = getFacettedBezirksregionChildTopic(geoObject);
             if (bezirksregion == null) {
-                logger.info("> No Bezirksregion set on \"" + geoObject.getSimpleValue().toString() + "\"");
+                logger.warning("> No Bezirksregion set on \"" + geoObject.getSimpleValue().toString() + "\"");
                 institution.addClassification("no-bezirksregion");
             }
-            institution.setName(geoObject.getSimpleValue().toString());
+            institution.setName(geoObject.getSimpleValue().toString()); // ### load child topic "ka2.geo_object.name"
             institution.setContact(contactValue);
             institution.setAddress(address.getSimpleValue().toString());
-            institution.setCreated((Long) created);
-            institution.setLastModified((Long) modified);
+            institution.setCreated(timeService.getCreationTime(geoObject.getId()));
+            institution.setLastModified(timeService.getModificationTime(geoObject.getId()));
             results.add(institution);
         }
         logger.info("> Identified " + missingMailboxes +" Geo Objects without an "
@@ -238,6 +257,11 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     private Topic getFacettedBezirksregionChildTopic(Topic facettedTopic) {
         return facettedTopic.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent",
             "dm4.core.child", "ka2.bezirksregion");
+    }
+
+    private Topic getFacettedBezirkChildTopic(Topic facettedTopic) {
+        return facettedTopic.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent",
+            "dm4.core.child", "ka2.bezirk");
     }
 
     /** @PUT
@@ -317,6 +341,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         //
         updateFacets(topic, facetTypes, newModel);
     }
+
+
 
     // ------------------------------------------------------------------------------------------------- Private Methods
 

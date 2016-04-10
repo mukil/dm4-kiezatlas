@@ -39,10 +39,10 @@ var administration = (function($) {
         var $listing = $('#listing .soziale-einrichtungen')
             $listing.empty()
         for (var aidx in items) {
-            var item = items[aidx]
-            $listing.append('<li><div class="list-item ' + item.class + '"><h3>' + item.name +'</h3>'
-                    + '<p>' + item.anschrift + ', <b>' + item.kontakt + '</b><br/><span class="label">'
-                    + new Date(item["dm4.time.modified"]) +'</span></p></div></li>')
+            var topic = items[aidx]
+            $listing.append('<li><div class="list-item ' + topic.class + '"><h3>' + topic.name +'</h3>'
+                    + '<p>' + topic.anschrift + ', <b>' + topic.kontakt + '</b><br/>Zuletzt bearbeitet: <span class="label">'
+                    + new Date(topic.modified) +'</span></p></div></li>')
             // console.log("Einrichtung", item)
         }
     }
