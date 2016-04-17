@@ -118,9 +118,13 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Transactional
     public Topic addGeoObjectToWebsite(@PathParam("geoObjectId") long geoObjectId, @PathParam("siteId") long siteId) {
         Topic geoObject = dms.getTopic(geoObjectId);
-        logger.info("Add Geo Object \"" + geoObject.getSimpleValue() + "\" to Site Topic: " + siteId);
-        dms.createAssociation(new AssociationModel("dm4.core.association",
-            new TopicRoleModel(geoObjectId, "dm4.core.default"), new TopicRoleModel(siteId, "dm4.core.default")));
+        if (!hasSiteAssociation(geoObject, siteId)) {
+            logger.info("Adding Geo Object \"" + geoObject.getSimpleValue() + "\" to Site Topic: " + siteId);
+            dms.createAssociation(new AssociationModel("dm4.core.association",
+                new TopicRoleModel(geoObjectId, "dm4.core.default"), new TopicRoleModel(siteId, "dm4.core.default")));
+        } else {
+            logger.info("Skipping adding Topic to Site, Association already EXISTS");
+        }
         return dms.getTopic(siteId);
     }
 
@@ -377,6 +381,14 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
 
 
+    private boolean hasSiteAssociation(Topic geoObject, long siteId) {
+        ResultList<RelatedTopic> sites = geoObject.getRelatedTopics("dm4.core.association", "dm4.core.default",
+            "dm4.core.default", TYPE_URI_WEBSITE, 0);
+        for (RelatedTopic site : sites) {
+            if (site.getId() == siteId) return true;
+        }
+        return false;
+    }
 
     // === Enrich with facets ===
 
