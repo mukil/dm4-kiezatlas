@@ -8,13 +8,17 @@ import de.deepamehta.plugins.facets.FacetsService;
 import de.deepamehta.core.AssociationDefinition;
 import de.deepamehta.core.RelatedTopic;
 import de.deepamehta.core.Topic;
+import de.deepamehta.core.model.AssociationModel;
+import de.deepamehta.core.model.ChildTopicsModel;
 import de.deepamehta.core.model.RelatedTopicModel;
 import de.deepamehta.core.model.TopicModel;
 import de.deepamehta.core.model.SimpleValue;
+import de.deepamehta.core.model.TopicRoleModel;
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Cookies;
 import de.deepamehta.core.service.Inject;
 import de.deepamehta.core.service.ResultList;
+import de.deepamehta.core.service.Transactional;
 import de.deepamehta.core.service.event.PostUpdateTopicListener;
 import de.deepamehta.core.service.event.PreSendTopicListener;
 import de.deepamehta.core.util.DeepaMehtaUtils;
@@ -44,6 +48,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     // ------------------------------------------------------------------------------------------------------- Constants
 
+    private static final String TYPE_URI_WEBSITE         = "ka2.website";
     private static final String TYPE_URI_GEO_OBJECT      = "ka2.geo_object";
     private static final String TYPE_URI_GEO_OBJECT_NAME = "ka2.geo_object.name";
 
@@ -93,7 +98,31 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     // *** Plugin Service ***
     // **********************
 
+    @POST
+    @Path("/create/{siteName}/{siteUri}")
+    @Transactional
+    public Topic createWebsite(@PathParam("siteName") String siteName, @PathParam("siteUri") String siteUri) {
+        Topic websiteTopic = dms.getTopic("uri", new SimpleValue(siteUri));
+        if (websiteTopic == null) {
+            logger.info("Creating Kiezatlas Website \"" + siteName + " with siteUri=\"" + siteUri + "\"");
+            websiteTopic = dms.createTopic(new TopicModel(siteUri, TYPE_URI_WEBSITE, new ChildTopicsModel()
+                .put("ka2.website.title", siteName)));
+        } else {
+            logger.info("Kiezatlas Website with siteUri=\"" + siteUri + "\" already exists");
+        }
+        return websiteTopic;
+    }
 
+    @POST
+    @Path("/add/{geoObjectId}/{siteId}")
+    @Transactional
+    public Topic addGeoObjectToWebsite(@PathParam("geoObjectId") long geoObjectId, @PathParam("siteId") long siteId) {
+        Topic geoObject = dms.getTopic(geoObjectId);
+        logger.info("Add Geo Object \"" + geoObject.getSimpleValue() + "\" to Site Topic: " + siteId);
+        dms.createAssociation(new AssociationModel("dm4.core.association",
+            new TopicRoleModel(geoObjectId, "dm4.core.default"), new TopicRoleModel(siteId, "dm4.core.default")));
+        return dms.getTopic(siteId);
+    }
 
     @GET
     @Path("/geomap/{geomap_id}")
@@ -101,7 +130,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     public Topic getWebsite(@PathParam("geomap_id") long geomapId) {
         try {
             return dms.getTopic(geomapId).getRelatedTopic(WEBSITE_GEOMAP, ROLE_TYPE_WEBSITE, ROLE_TYPE_GEOMAP,
-                "ka2.website");
+                TYPE_URI_WEBSITE);
         } catch (Exception e) {
             throw new RuntimeException("Finding the geomap's website topic failed (geomapId=" + geomapId + ")", e);
         }
