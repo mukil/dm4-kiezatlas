@@ -54,9 +54,9 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     // The URIs of KA2 Geo Object topics have this prefix.
     // The remaining part of the URI is the original KA1 topic id.
-    // private static final String KA2_GEO_OBJECT_URI_PREFIX = "de.kiezatlas.topic.";
-    // private static final String GEO_OBJECT_OWNER_PROPERTY = "de.kiezatlas.owner";
-    // private static final String GEO_OBJECT_KEYWORD_PROPERTY = "de.kiezatlas.key.";
+    private static final String KA2_GEO_OBJECT_URI_PREFIX = "de.kiezatlas.topic.";
+    private static final String GEO_OBJECT_OWNER_PROPERTY = "de.kiezatlas.owner";
+    private static final String GEO_OBJECT_KEYWORD_PROPERTY = "de.kiezatlas.key.";
 
     // Website-Geomap association
     private static final String WEBSITE_GEOMAP = "dm4.core.association";
@@ -213,9 +213,32 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             institution.setName(geoObject.getSimpleValue().toString()); // ### load child topic "ka2.geo_object.name"
             Topic bezirk = getFacettedBezirkChildTopic(geoObject);
             if (bezirk == null) {
-                logger.warning("> No Bezirk Relation is missing for " + geoObject.getSimpleValue());
+                logger.warning("> Bezirks Relation is missing for " + geoObject.getSimpleValue());
                 institution.setCreated(timeService.getCreationTime(geoObject.getId()));
                 institution.setLastModified(timeService.getModificationTime(geoObject.getId()));
+                institution.setUri(geoObject.getUri());
+                results.add(institution);
+            }
+        }
+        return results;
+    }
+
+    @GET
+    @Path("/einrichtungen/missing-link/")
+    public List<SocialInstitutionObject> getInstitutionsMissingBacklink() {
+        logger.info("Fetching Social Institutions without a BEZIRK & BEZIRKSREGION assignment");
+        List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
+        List<Topic> topics = dms.getTopics("type_uri", new SimpleValue("ka2.geo_object"));
+        for (Topic geoObject : topics) {
+            SocialInstitutionObject institution = new SocialInstitutionObject();
+            institution.setName(geoObject.getSimpleValue().toString()); // ### load child topic "ka2.geo_object.name"
+            Topic bezirk = getFacettedBezirkChildTopic(geoObject);
+            Topic bezirksregion = getFacettedBezirksregionChildTopic(geoObject);
+            if (bezirk == null && bezirksregion == null) {
+                logger.warning("> Bezirks and Bezirksregion Relation is missing for " + geoObject.getSimpleValue());
+                institution.setCreated(timeService.getCreationTime(geoObject.getId()));
+                institution.setLastModified(timeService.getModificationTime(geoObject.getId()));
+                institution.setUri(geoObject.getUri());
                 results.add(institution);
             }
         }
@@ -297,7 +320,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             "dm4.core.child", "ka2.bezirk");
     }
 
-    /** @PUT
+    @PUT
     @Path("/geoobject/attribution/{topicId}/{owner}")
     @Transactional
     @Consumes(MediaType.TEXT_PLAIN)
@@ -323,7 +346,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             return Response.status(405).build();
         }
         return Response.status(404).build();
-    } **/
+    }
 
     @GET
     @Path("/category/objects")
