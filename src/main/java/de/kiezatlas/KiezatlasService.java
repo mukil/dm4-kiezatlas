@@ -1,7 +1,5 @@
 package de.kiezatlas;
 
-import de.kiezatlas.GeoObjects;
-import de.kiezatlas.GroupedGeoObjects;
 
 import de.deepamehta.core.RelatedTopic;
 import de.deepamehta.core.Topic;
@@ -12,6 +10,11 @@ import java.util.List;
 
 
 public interface KiezatlasService {
+
+    static final String WEBSITE         = "ka2.website";
+    static final String GEO_OBJECT      = "ka2.geo_object";
+    static final String GEO_OBJECT_NAME = "ka2.geo_object.name";
+    static final String GEO_OBJECT_ADDRESS = "dm4.contacts.address";
 
     /**
      * Returns the "Kiezatlas Website" topic the given geomap is assigned to.

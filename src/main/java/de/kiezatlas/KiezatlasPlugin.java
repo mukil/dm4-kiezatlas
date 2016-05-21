@@ -24,6 +24,7 @@ import de.deepamehta.core.service.event.PreSendTopicListener;
 import de.deepamehta.core.util.DeepaMehtaUtils;
 import de.deepamehta.plugins.geomaps.model.GeoCoordinate;
 import de.deepamehta.plugins.time.TimeService;
+import de.deepamehta.plugins.workspaces.WorkspacesService;
 import java.io.InputStream;
 
 import javax.ws.rs.*;
@@ -48,10 +49,6 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     // ------------------------------------------------------------------------------------------------------- Constants
 
-    private static final String TYPE_URI_WEBSITE         = "ka2.website";
-    private static final String TYPE_URI_GEO_OBJECT      = "ka2.geo_object";
-    private static final String TYPE_URI_GEO_OBJECT_NAME = "ka2.geo_object.name";
-
     // The URIs of KA2 Geo Object topics have this prefix.
     // The remaining part of the URI is the original KA1 topic id.
     private static final String KA2_GEO_OBJECT_URI_PREFIX = "de.kiezatlas.topic.";
@@ -72,6 +69,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Inject private FacetsService facetsService;
     @Inject private TimeService timeService;
     @Inject private AccessControlService accessControlService;
+    @Inject private WorkspacesService workspaceService;
 
     private Logger logger = Logger.getLogger(getClass().getName());
 
@@ -105,7 +103,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         Topic websiteTopic = dms.getTopic("uri", new SimpleValue(siteUri));
         if (websiteTopic == null) {
             logger.info("Creating Kiezatlas Website \"" + siteName + " with siteUri=\"" + siteUri + "\"");
-            websiteTopic = dms.createTopic(new TopicModel(siteUri, TYPE_URI_WEBSITE, new ChildTopicsModel()
+            websiteTopic = dms.createTopic(new TopicModel(siteUri, WEBSITE, new ChildTopicsModel()
                 .put("ka2.website.title", siteName)));
         } else {
             logger.info("Kiezatlas Website with siteUri=\"" + siteUri + "\" already exists");
@@ -134,7 +132,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     public Topic getWebsite(@PathParam("geomap_id") long geomapId) {
         try {
             return dms.getTopic(geomapId).getRelatedTopic(WEBSITE_GEOMAP, ROLE_TYPE_WEBSITE, ROLE_TYPE_GEOMAP,
-                TYPE_URI_WEBSITE);
+                WEBSITE);
         } catch (Exception e) {
             throw new RuntimeException("Finding the geomap's website topic failed (geomapId=" + geomapId + ")", e);
         }
@@ -187,7 +185,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Override
     public List<RelatedTopic> getGeoObjectsByCategory(@PathParam("id") long categoryId) {
         return dms.getTopic(categoryId).getRelatedTopics("dm4.core.aggregation", "dm4.core.child", "dm4.core.parent",
-                TYPE_URI_GEO_OBJECT, 0).getItems();
+                GEO_OBJECT, 0).getItems();
     }
 
     // Todo: Ditch this in favor of new website module
@@ -196,7 +194,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Override
     public GeoObjects searchGeoObjectNames(@QueryParam("search") String searchTerm, @QueryParam("clock") long clock) {
         GeoObjects result = new GeoObjects(clock);
-        for (Topic geoObjectName : dms.searchTopics("*" + searchTerm + "*", TYPE_URI_GEO_OBJECT_NAME)) {
+        for (Topic geoObjectName : dms.searchTopics("*" + searchTerm + "*", GEO_OBJECT_NAME)) {
             result.add(getGeoObject(geoObjectName));
         }
         return result;
@@ -372,7 +370,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     @Override
     public void preSendTopic(Topic topic) {
-        if (!topic.getTypeUri().equals(TYPE_URI_GEO_OBJECT)) {
+        if (!topic.getTypeUri().equals(GEO_OBJECT)) {
             return;
         }
         //
@@ -386,7 +384,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     @Override
     public void postUpdateTopic(Topic topic, TopicModel newModel, TopicModel oldModel) {
-        if (!topic.getTypeUri().equals(TYPE_URI_GEO_OBJECT)) {
+        if (!topic.getTypeUri().equals(GEO_OBJECT)) {
             return;
         }
         //
@@ -406,7 +404,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     private boolean hasSiteAssociation(Topic geoObject, long siteId) {
         ResultList<RelatedTopic> sites = geoObject.getRelatedTopics("dm4.core.association", "dm4.core.default",
-            "dm4.core.default", TYPE_URI_WEBSITE, 0);
+            "dm4.core.default", WEBSITE, 0);
         for (RelatedTopic site : sites) {
             if (site.getId() == siteId) return true;
         }
@@ -531,7 +529,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     private Topic getGeoObject(Topic geoObjectName) {
         return geoObjectName.getRelatedTopic("dm4.core.composition", "dm4.core.child", "dm4.core.parent",
-            TYPE_URI_GEO_OBJECT);   // ### TODO: Core API should provide type-driven navigation
+            GEO_OBJECT);   // ### TODO: Core API should provide type-driven navigation
     }
 
     private boolean isGeomap(long topicmapId) {
