@@ -1,6 +1,7 @@
 package de.kiezatlas;
 
 
+import de.deepamehta.core.Association;
 import de.deepamehta.core.RelatedTopic;
 import de.deepamehta.core.Topic;
 import de.deepamehta.core.service.ResultList;
@@ -59,4 +60,15 @@ public interface KiezatlasService {
      *                  Allows the client to order asynchronous responses.
      */
     GroupedGeoObjects searchCategories(String searchTerm, long clock);
+
+    Topic createWebsite(String siteName, String siteUri);
+
+    Association addGeoObjectToWebsite(long geoObjectId, long siteId);
+
+    Topic getFacettedBezirkChildTopic(Topic facettedTopic);
+
+    Topic getFacettedBezirksregionChildTopic(Topic facettedTopic);
+
+    String getGeoObjectAttribution(Topic geoObject);
+
 }

@@ -1,5 +1,6 @@
 package de.kiezatlas;
 
+import de.deepamehta.core.Association;
 import de.deepamehta.plugins.accesscontrol.AccessControlService;
 import de.deepamehta.plugins.geomaps.GeomapsService;
 import de.deepamehta.plugins.facets.model.FacetValue;
@@ -99,6 +100,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @POST
     @Path("/create/{siteName}/{siteUri}")
     @Transactional
+    @Override
     public Topic createWebsite(@PathParam("siteName") String siteName, @PathParam("siteUri") String siteUri) {
         Topic websiteTopic = dms.getTopic("uri", new SimpleValue(siteUri));
         if (websiteTopic == null) {
@@ -114,16 +116,18 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @POST
     @Path("/add/{geoObjectId}/{siteId}")
     @Transactional
-    public Topic addGeoObjectToWebsite(@PathParam("geoObjectId") long geoObjectId, @PathParam("siteId") long siteId) {
+    @Override
+    public Association addGeoObjectToWebsite(@PathParam("geoObjectId") long geoObjectId, @PathParam("siteId") long siteId) {
         Topic geoObject = dms.getTopic(geoObjectId);
+        Association relation = null;
         if (!hasSiteAssociation(geoObject, siteId)) {
             logger.info("Adding Geo Object \"" + geoObject.getSimpleValue() + "\" to Site Topic: " + siteId);
-            dms.createAssociation(new AssociationModel("dm4.core.association",
+            relation = dms.createAssociation(new AssociationModel("dm4.core.association",
                 new TopicRoleModel(geoObjectId, "dm4.core.default"), new TopicRoleModel(siteId, "dm4.core.default")));
         } else {
             logger.info("Skipping adding Topic to Site, Association already EXISTS");
         }
-        return dms.getTopic(siteId);
+        return relation;
     }
 
     @GET
@@ -308,12 +312,20 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             "dm4.core.child", "ka2.kontakt");
     }
 
-    private Topic getFacettedBezirksregionChildTopic(Topic facettedTopic) {
+    @Override
+    public String getGeoObjectAttribution(Topic geoObject) {
+        return (String) geoObject.getProperty(GEO_OBJECT_OWNER_PROPERTY) + ":"
+            + (String) geoObject.getProperty(GEO_OBJECT_KEYWORD_PROPERTY);
+    }
+
+    @Override
+    public Topic getFacettedBezirksregionChildTopic(Topic facettedTopic) {
         return facettedTopic.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent",
             "dm4.core.child", "ka2.bezirksregion");
     }
 
-    private Topic getFacettedBezirkChildTopic(Topic facettedTopic) {
+    @Override
+    public Topic getFacettedBezirkChildTopic(Topic facettedTopic) {
         return facettedTopic.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent",
             "dm4.core.child", "ka2.bezirk");
     }
@@ -322,8 +334,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Path("/geoobject/attribution/{topicId}/{owner}")
     @Transactional
     @Consumes(MediaType.TEXT_PLAIN)
-    public Response createGeoObjectAttribution(@PathParam("topicId") long id, @PathParam("owner") String owner,
-                                               String key) {
+    public Response createGeoObjectAttribution(@PathParam("topicId") long id, @PathParam("owner") String owner, String key) {
         Topic geoObject = dms.getTopic(id);
         if (geoObject != null && !owner.isEmpty() && !key.isEmpty()) {
             String value = owner.trim();

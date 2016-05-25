@@ -9,7 +9,7 @@ import org.codehaus.jettison.json.JSONObject;
 
 
 /**
- * A data transfer object as returned by the Kiezatlas Institution API service.
+ * A data transfer object as returned by the Kiezatlas Institution API and as used by Administrators.
  */
 public class SocialInstitutionObject implements JSONEnabled {
 
