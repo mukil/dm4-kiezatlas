@@ -312,6 +312,11 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             "dm4.core.child", "ka2.kontakt");
     }
 
+    private Topic getFacettedBezirkChildTopic(Topic facettedTopic) {
+        return facettedTopic.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent",
+            "dm4.core.child", "ka2.bezirk");
+    }
+
     @Override
     public String getGeoObjectAttribution(Topic geoObject) {
         return (String) geoObject.getProperty(GEO_OBJECT_OWNER_PROPERTY) + ":"
@@ -325,9 +330,9 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     @Override
-    public Topic getFacettedBezirkChildTopic(Topic facettedTopic) {
-        return facettedTopic.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent",
-            "dm4.core.child", "ka2.bezirk");
+    public ResultList<RelatedTopic> getGeoObjectsByBezirkFacet(Topic bezirksFacet) {
+        return bezirksFacet.getRelatedTopics("dm4.core.aggregation", "dm4.core.child",
+            "dm4.core.parent", "ka2.geo_object", 0);
     }
 
     @PUT

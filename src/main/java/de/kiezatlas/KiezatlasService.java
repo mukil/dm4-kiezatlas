@@ -65,7 +65,7 @@ public interface KiezatlasService {
 
     Association addGeoObjectToWebsite(long geoObjectId, long siteId);
 
-    Topic getFacettedBezirkChildTopic(Topic facettedTopic);
+    ResultList<RelatedTopic> getGeoObjectsByBezirkFacet(Topic bezirksFacet);
 
     Topic getFacettedBezirksregionChildTopic(Topic facettedTopic);
 
