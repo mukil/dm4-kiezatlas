@@ -42,6 +42,11 @@
             <artifactId>deepamehta-workspaces</artifactId>
             <version>4.7</version>
         </dependency>
+        <dependency>
+            <groupId>de.deepamehta</groupId>
+            <artifactId>deepamehta-contacts</artifactId>
+            <version>4.7</version>
+        </dependency>
     </dependencies>
 
     <build>
