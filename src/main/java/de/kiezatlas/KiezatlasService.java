@@ -5,12 +5,18 @@ import de.deepamehta.core.Association;
 import de.deepamehta.core.RelatedTopic;
 import de.deepamehta.core.Topic;
 import de.deepamehta.core.service.ResultList;
+import de.deepamehta.core.service.accesscontrol.SharingMode;
+import de.deepamehta.plugins.geomaps.model.GeoCoordinate;
 
 import java.util.List;
 
 
 
 public interface KiezatlasService {
+
+    static final String KIEZATLAS_WORKSPACE_NAME = "Kiezatlas";
+    static final String KIEZATLAS_WORKSPACE_URI = "de.kiezatlas.workspace";
+    static final SharingMode KIEZATLAS_WORKSPACE_SHARING_MODE = SharingMode.PUBLIC;
 
     static final String WEBSITE         = "ka2.website";
     static final String GEO_OBJECT      = "ka2.geo_object";
@@ -65,7 +71,14 @@ public interface KiezatlasService {
 
     Association addGeoObjectToWebsite(long geoObjectId, long siteId);
 
-    ResultList<RelatedTopic> getGeoObjectsByBezirkFacet(Topic bezirksFacet);
+    /** Fetches Geo Coordinate facet related to a Geo Objects Address (!) topic. */
+    GeoCoordinate getGeoCoordinateByGeoObject(Topic geoObject);
+
+    ResultList<RelatedTopic> getParentRelatedAggregatedGeoObjects(Topic bezirksFacet);
+
+    Topic getImageFileFacetByGeoObject(Topic facettedTopic);
+
+    void updateImageFileFacet(Topic geoObject, String imageFilePath);
 
     Topic getFacettedBezirksregionChildTopic(Topic facettedTopic);
 

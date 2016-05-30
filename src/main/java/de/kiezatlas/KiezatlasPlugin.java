@@ -171,7 +171,6 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         return criteria;
     }
 
-    // Note: the "include_childs" query paramter is handled by the core's JerseyResponseFilter
     @GET
     @Path("/geomap/{geomap_id}/objects")
     @Override
@@ -183,7 +182,6 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         }
     }
 
-    // Note: the "include_childs" query paramter is handled by the core's JerseyResponseFilter
     @GET
     @Path("/category/{id}/objects")
     @Override
@@ -192,7 +190,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
                 GEO_OBJECT, 0).getItems();
     }
 
-    // Todo: Ditch this in favor of new website module
+    /** Used by famportal editorial tool. */
     @GET
     @Path("/geoobject")
     @Override
@@ -307,39 +305,12 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         return results;
     }
 
-    private Topic getFacettedContactChildTopic(Topic facettedTopic) {
-        return facettedTopic.getRelatedTopic("dm4.core.composition", "dm4.core.parent",
-            "dm4.core.child", "ka2.kontakt");
-    }
-
-    private Topic getFacettedBezirkChildTopic(Topic facettedTopic) {
-        return facettedTopic.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent",
-            "dm4.core.child", "ka2.bezirk");
-    }
-
-    @Override
-    public String getGeoObjectAttribution(Topic geoObject) {
-        return (String) geoObject.getProperty(GEO_OBJECT_OWNER_PROPERTY) + ":"
-            + (String) geoObject.getProperty(GEO_OBJECT_KEYWORD_PROPERTY);
-    }
-
-    @Override
-    public Topic getFacettedBezirksregionChildTopic(Topic facettedTopic) {
-        return facettedTopic.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent",
-            "dm4.core.child", "ka2.bezirksregion");
-    }
-
-    @Override
-    public ResultList<RelatedTopic> getGeoObjectsByBezirkFacet(Topic bezirksFacet) {
-        return bezirksFacet.getRelatedTopics("dm4.core.aggregation", "dm4.core.child",
-            "dm4.core.parent", "ka2.geo_object", 0);
-    }
-
     @PUT
     @Path("/geoobject/attribution/{topicId}/{owner}")
     @Transactional
     @Consumes(MediaType.TEXT_PLAIN)
-    public Response createGeoObjectAttribution(@PathParam("topicId") long id, @PathParam("owner") String owner, String key) {
+    public Response createGeoObjectAttribution(@PathParam("topicId") long id,
+            @PathParam("owner") String owner, String key) {
         Topic geoObject = dms.getTopic(id);
         if (geoObject != null && !owner.isEmpty() && !key.isEmpty()) {
             String value = owner.trim();
@@ -366,7 +337,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Path("/category/objects")
     @Override
     public GroupedGeoObjects searchCategories(@QueryParam("search") String searchTerm,
-                                              @QueryParam("clock") long clock) {
+            @QueryParam("clock") long clock) {
         GroupedGeoObjects result = new GroupedGeoObjects(clock);
         for (Topic criteria : getAllCriteria()) {
             for (Topic category : dms.searchTopics("*" + searchTerm + "*", criteria.getUri())) {
@@ -376,7 +347,44 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         return result;
     }
 
+    @Override
+    public GeoCoordinate getGeoCoordinateByGeoObject(Topic geoObject) {
+        Topic addressTopic = geoObject.getChildTopics().getTopic(GEO_OBJECT_ADDRESS);
+        if (addressTopic != null) return geomapsService.getGeoCoordinate(addressTopic);
+        logger.warning("GeoCoordinate could not be determined becuase no Address is related to Geo Object: "
+            + geoObject.getSimpleValue());
+        return null;
+    }
 
+    @Override
+    public String getGeoObjectAttribution(Topic geoObject) {
+        return (String) geoObject.getProperty(GEO_OBJECT_OWNER_PROPERTY) + ":"
+            + (String) geoObject.getProperty(GEO_OBJECT_KEYWORD_PROPERTY);
+    }
+
+    /** This facet depends/just exists after installation of the dm4-kiezatlas-etl plugin. */
+    @Override
+    public Topic getFacettedBezirksregionChildTopic(Topic facettedTopic) {
+        // Note: Untested
+        return facetsService.getFacet(facettedTopic, "ka2.bezirksregion.facet");
+    }
+
+    /** This facet depends/just exists after installation of the dm4-kiezatlas-etl plugin. */
+    @Override
+    public Topic getImageFileFacetByGeoObject(Topic geoObject) {
+        return facetsService.getFacet(geoObject, "ka2.bild.facet");
+    }
+
+    @Override
+    public ResultList<RelatedTopic> getParentRelatedAggregatedGeoObjects(Topic bezirksFacet) {
+        return bezirksFacet.getRelatedTopics("dm4.core.aggregation", "dm4.core.child",
+            "dm4.core.parent", "ka2.geo_object", 0);
+    }
+
+    @Override
+    public void updateImageFileFacet(Topic geoObject, String imageFilePath) {
+        facetsService.updateFacet(geoObject, "ka2.bild.facet", new FacetValue("ka2.bild.pfad").put(imageFilePath));
+    }
 
     // ********************************
     // *** Listener Implementations ***
@@ -416,7 +424,15 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     // ------------------------------------------------------------------------------------------------- Private Methods
 
+    private Topic getFacettedContactChildTopic(Topic facettedTopic) {
+        return facettedTopic.getRelatedTopic("dm4.core.composition", "dm4.core.parent",
+            "dm4.core.child", "ka2.kontakt");
+    }
 
+    private Topic getFacettedBezirkChildTopic(Topic facettedTopic) {
+        return facettedTopic.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent",
+            "dm4.core.child", "ka2.bezirk");
+    }
 
     private boolean hasSiteAssociation(Topic geoObject, long siteId) {
         ResultList<RelatedTopic> sites = geoObject.getRelatedTopics("dm4.core.association", "dm4.core.default",

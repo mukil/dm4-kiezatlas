@@ -4,9 +4,11 @@ import de.deepamehta.core.service.Inject;
 import de.deepamehta.core.service.Migration;
 import de.deepamehta.core.TopicType;
 import de.deepamehta.core.Topic;
-import de.deepamehta.core.service.accesscontrol.SharingMode;
 import de.deepamehta.plugins.accesscontrol.AccessControlService;
 import de.deepamehta.plugins.workspaces.WorkspacesService;
+import static de.kiezatlas.KiezatlasService.KIEZATLAS_WORKSPACE_NAME;
+import static de.kiezatlas.KiezatlasService.KIEZATLAS_WORKSPACE_SHARING_MODE;
+import static de.kiezatlas.KiezatlasService.KIEZATLAS_WORKSPACE_URI;
 
 /**
  * Introduces the Public "Kiezatlas" Workspace (as of 4.7).
@@ -16,10 +18,6 @@ import de.deepamehta.plugins.workspaces.WorkspacesService;
  * */
 
 public class Migration3 extends Migration {
-
-    static final String KIEZATLAS_WORKSPACE_NAME = "Kiezatlas";
-    static final String KIEZATLAS_WORKSPACE_URI = "de.kiezatlas.workspace";
-    static final SharingMode KIEZATLAS_WORKSPACE_SHARING_MODE = SharingMode.PUBLIC;
 
     @Inject
     private WorkspacesService workspaceService;
