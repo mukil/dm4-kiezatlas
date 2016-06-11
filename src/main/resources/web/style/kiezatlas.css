@@ -53,12 +53,19 @@ ul.soziale-einrichtungen li {
     list-style-type: none;
 }
 
+.soziale-einrichtungen a .list-item {
+    text-decoration: none;
+}
+
 .soziale-einrichtungen .list-item {
     background: #fff;
     padding: 15px;
     border: 1px solid #002856;
-    cursor: pointer;
     margin: 5px;
+}
+
+.soziale-einrichtung a .list-item {
+    cursor: pointer;
 }
 
 .soziale-einrichtungen .list-item h3,

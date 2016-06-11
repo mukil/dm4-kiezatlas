@@ -247,8 +247,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     // Note: Fetch and build up administrative response objects
     @GET
-    @Path("/einrichtungen/{id}")
-    public List<SocialInstitutionObject> getSiteInstitutions(@PathParam("id") long topicId) {
+    @Path("/einrichtungen/{bezirksTopicId}")
+    public List<SocialInstitutionObject> getSiteInstitutions(@PathParam("bezirksTopicId") long topicId) {
         logger.info("Loading Social Institutions related to super Topic " + topicId);
         List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
         Topic superTopic = dms.getTopic(topicId);
@@ -354,6 +354,16 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         logger.warning("GeoCoordinate could not be determined becuase no Address is related to Geo Object: "
             + geoObject.getSimpleValue());
         return null;
+    }
+
+    /**
+     * Returns the Geo Coordinate topic (including its child topics) of a geo-facetted topic (e.g. an Address),
+     * or <code>null</code> if no geo coordinate is stored.
+     */
+    @Override
+    public Topic getGeoCoordinateTopic(Topic addressTopic) {
+        Topic geoCoordTopic = facetsService.getFacet(addressTopic, "dm4.geomaps.geo_coordinate_facet");
+        return geoCoordTopic != null ? geoCoordTopic.loadChildTopics() : null;
     }
 
     @Override

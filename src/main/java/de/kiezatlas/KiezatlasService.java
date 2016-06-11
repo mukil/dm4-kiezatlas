@@ -72,7 +72,10 @@ public interface KiezatlasService {
     Association addGeoObjectToWebsite(long geoObjectId, long siteId);
 
     /** Fetches Geo Coordinate facet related to a Geo Objects Address (!) topic. */
-    GeoCoordinate getGeoCoordinateByGeoObject(Topic geoObject);
+    GeoCoordinate getGeoCoordinateByGeoObject(Topic address);
+
+    /** Fetches the Geo Coordinate topic related to a Geo Objects Address (!) topic. */
+    Topic getGeoCoordinateTopic(Topic address);
 
     ResultList<RelatedTopic> getParentRelatedAggregatedGeoObjects(Topic bezirksFacet);
 
