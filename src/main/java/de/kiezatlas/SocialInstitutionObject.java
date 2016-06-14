@@ -1,7 +1,7 @@
 package de.kiezatlas;
 
 import de.deepamehta.core.JSONEnabled;
-import de.deepamehta.plugins.geomaps.model.GeoCoordinate;
+import de.deepamehta.geomaps.model.GeoCoordinate;
 import org.codehaus.jettison.json.JSONArray;
 
 import org.codehaus.jettison.json.JSONObject;

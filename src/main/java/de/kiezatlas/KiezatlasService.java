@@ -1,13 +1,10 @@
 package de.kiezatlas;
 
-
 import de.deepamehta.core.Association;
 import de.deepamehta.core.RelatedTopic;
 import de.deepamehta.core.Topic;
-import de.deepamehta.core.service.ResultList;
 import de.deepamehta.core.service.accesscontrol.SharingMode;
-import de.deepamehta.plugins.geomaps.model.GeoCoordinate;
-
+import de.deepamehta.geomaps.model.GeoCoordinate;
 import java.util.List;
 
 
@@ -31,7 +28,7 @@ public interface KiezatlasService {
     /**
      * Returns the facet types assigned to the given Kiezatlas Website.
      */
-    ResultList<RelatedTopic> getFacetTypes(long websiteId);
+    List<RelatedTopic> getFacetTypes(long websiteId);
 
     /**
      * Returns all Kiezatlas criteria existing in the DB. ### Experimental
@@ -77,7 +74,7 @@ public interface KiezatlasService {
     /** Fetches the Geo Coordinate topic related to a Geo Objects Address (!) topic. */
     Topic getGeoCoordinateTopic(Topic address);
 
-    ResultList<RelatedTopic> getParentRelatedAggregatedGeoObjects(Topic bezirksFacet);
+    List<RelatedTopic> getParentRelatedAggregatedGeoObjects(Topic bezirksFacet);
 
     Topic getImageFileFacetByGeoObject(Topic facettedTopic);
 
