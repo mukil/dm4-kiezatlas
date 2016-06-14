@@ -1,30 +1,26 @@
 package de.kiezatlas;
 
-import de.deepamehta.plugins.accesscontrol.AccessControlService;
-import de.deepamehta.plugins.geomaps.GeomapsService;
-import de.deepamehta.plugins.facets.model.FacetValue;
-import de.deepamehta.plugins.facets.FacetsService;
+import de.deepamehta.accesscontrol.AccessControlService;
+import de.deepamehta.geomaps.GeomapsService;
+import de.deepamehta.facets.FacetsService;
 
 import de.deepamehta.core.AssociationDefinition;
 import de.deepamehta.core.RelatedTopic;
 import de.deepamehta.core.Topic;
-import de.deepamehta.core.model.AssociationModel;
-import de.deepamehta.core.model.ChildTopicsModel;
 import de.deepamehta.core.model.RelatedTopicModel;
 import de.deepamehta.core.model.TopicModel;
 import de.deepamehta.core.model.SimpleValue;
-import de.deepamehta.core.model.TopicRoleModel;
+import de.deepamehta.core.model.facets.FacetValueModel;
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Cookies;
 import de.deepamehta.core.service.Inject;
-import de.deepamehta.core.service.ResultList;
 import de.deepamehta.core.service.Transactional;
 import de.deepamehta.core.service.event.PostUpdateTopicListener;
 import de.deepamehta.core.service.event.PreSendTopicListener;
 import de.deepamehta.core.util.DeepaMehtaUtils;
-import de.deepamehta.plugins.geomaps.model.GeoCoordinate;
-import de.deepamehta.plugins.time.TimeService;
-import de.deepamehta.plugins.workspaces.WorkspacesService;
+import de.deepamehta.geomaps.model.GeoCoordinate;
+import de.deepamehta.time.TimeService;
+import de.deepamehta.workspaces.WorkspacesService;
 import java.io.InputStream;
 
 import javax.ws.rs.*;
@@ -100,10 +96,10 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Path("/create/{siteName}/{siteUri}")
     @Transactional
     public Topic createWebsite(@PathParam("siteName") String siteName, @PathParam("siteUri") String siteUri) {
-        Topic websiteTopic = dms.getTopic("uri", new SimpleValue(siteUri));
+        Topic websiteTopic = dm4.getTopicByValue("uri", new SimpleValue(siteUri));
         if (websiteTopic == null) {
             logger.info("Creating Kiezatlas Website \"" + siteName + " with siteUri=\"" + siteUri + "\"");
-            websiteTopic = dms.createTopic(new TopicModel(siteUri, WEBSITE, new ChildTopicsModel()
+            websiteTopic = dm4.createTopic(mf.newTopicModel(siteUri, WEBSITE, mf.newChildTopicsModel()
                 .put("ka2.website.title", siteName)));
         } else {
             logger.info("Kiezatlas Website with siteUri=\"" + siteUri + "\" already exists");
@@ -115,15 +111,15 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Path("/add/{geoObjectId}/{siteId}")
     @Transactional
     public Topic addGeoObjectToWebsite(@PathParam("geoObjectId") long geoObjectId, @PathParam("siteId") long siteId) {
-        Topic geoObject = dms.getTopic(geoObjectId);
+        Topic geoObject = dm4.getTopic(geoObjectId);
         if (!hasSiteAssociation(geoObject, siteId)) {
             logger.info("Adding Geo Object \"" + geoObject.getSimpleValue() + "\" to Site Topic: " + siteId);
-            dms.createAssociation(new AssociationModel("dm4.core.association",
-                new TopicRoleModel(geoObjectId, "dm4.core.default"), new TopicRoleModel(siteId, "dm4.core.default")));
+            dm4.createAssociation(mf.newAssociationModel("dm4.core.association",
+                mf.newTopicRoleModel(geoObjectId, "dm4.core.default"), mf.newTopicRoleModel(siteId, "dm4.core.default")));
         } else {
             logger.info("Skipping adding Topic to Site, Association already EXISTS");
         }
-        return dms.getTopic(siteId);
+        return dm4.getTopic(siteId);
     }
 
     @GET
@@ -131,7 +127,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Override
     public Topic getWebsite(@PathParam("geomap_id") long geomapId) {
         try {
-            return dms.getTopic(geomapId).getRelatedTopic(WEBSITE_GEOMAP, ROLE_TYPE_WEBSITE, ROLE_TYPE_GEOMAP,
+            return dm4.getTopic(geomapId).getRelatedTopic(WEBSITE_GEOMAP, ROLE_TYPE_WEBSITE, ROLE_TYPE_GEOMAP,
                 WEBSITE);
         } catch (Exception e) {
             throw new RuntimeException("Finding the geomap's website topic failed (geomapId=" + geomapId + ")", e);
@@ -141,10 +137,10 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @GET
     @Path("/{website_id}/facets")
     @Override
-    public ResultList<RelatedTopic> getFacetTypes(@PathParam("website_id") long websiteId) {
+    public List<RelatedTopic> getFacetTypes(@PathParam("website_id") long websiteId) {
         try {
-            return dms.getTopic(websiteId).getRelatedTopics(WEBSITE_FACET_TYPES, ROLE_TYPE_WEBSITE,
-                ROLE_TYPE_FACET_TYPE, "dm4.core.topic_type", 0);
+            return dm4.getTopic(websiteId).getRelatedTopics(WEBSITE_FACET_TYPES, ROLE_TYPE_WEBSITE,
+                ROLE_TYPE_FACET_TYPE, "dm4.core.topic_type");
         } catch (Exception e) {
             throw new RuntimeException("Finding the website's facet types failed (websiteId=" + websiteId + ")", e);
         }
@@ -154,7 +150,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Path("/criteria")
     @Override
     public List<Topic> getAllCriteria() {
-        List<Topic> criteria = dms.getTopics("uri", new SimpleValue("ka2.criteria.*"));
+        List<Topic> criteria = dm4.getTopicsByValue("uri", new SimpleValue("ka2.criteria.*"));
         // remove facet types
         Iterator<Topic> i = criteria.iterator();
         while (i.hasNext()) {
@@ -184,8 +180,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Path("/category/{id}/objects")
     @Override
     public List<RelatedTopic> getGeoObjectsByCategory(@PathParam("id") long categoryId) {
-        return dms.getTopic(categoryId).getRelatedTopics("dm4.core.aggregation", "dm4.core.child", "dm4.core.parent",
-                GEO_OBJECT, 0).getItems();
+        return dm4.getTopic(categoryId).getRelatedTopics("dm4.core.aggregation", "dm4.core.child", "dm4.core.parent",
+                GEO_OBJECT);
     }
 
     // Todo: Ditch this in favor of new website module
@@ -194,7 +190,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Override
     public GeoObjects searchGeoObjectNames(@QueryParam("search") String searchTerm, @QueryParam("clock") long clock) {
         GeoObjects result = new GeoObjects(clock);
-        for (Topic geoObjectName : dms.searchTopics("*" + searchTerm + "*", GEO_OBJECT_NAME)) {
+        for (Topic geoObjectName : dm4.searchTopics("*" + searchTerm + "*", GEO_OBJECT_NAME)) {
             result.add(getGeoObject(geoObjectName));
         }
         return result;
@@ -205,7 +201,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     public List<SocialInstitutionObject> getInstitutionsMissingBezirk() {
         logger.info("Fetching Social Institutions without a BEZIRK assignment");
         List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
-        List<Topic> topics = dms.getTopics("type_uri", new SimpleValue("ka2.geo_object"));
+        List<Topic> topics = dm4.getTopicsByType("ka2.geo_object");
         for (Topic geoObject : topics) {
             SocialInstitutionObject institution = new SocialInstitutionObject();
             institution.setName(geoObject.getSimpleValue().toString()); // ### load child topic "ka2.geo_object.name"
@@ -226,7 +222,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     public List<SocialInstitutionObject> getInstitutionsMissingBacklink() {
         logger.info("Fetching Social Institutions without a BEZIRK & BEZIRKSREGION assignment");
         List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
-        List<Topic> topics = dms.getTopics("type_uri", new SimpleValue("ka2.geo_object"));
+        List<Topic> topics = dm4.getTopicsByType("ka2.geo_object");
         for (Topic geoObject : topics) {
             SocialInstitutionObject institution = new SocialInstitutionObject();
             institution.setName(geoObject.getSimpleValue().toString()); // ### load child topic "ka2.geo_object.name"
@@ -249,9 +245,9 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     public List<SocialInstitutionObject> getSiteInstitutions(@PathParam("id") long topicId) {
         logger.info("Loading Social Institutions related to super Topic " + topicId);
         List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
-        Topic superTopic = dms.getTopic(topicId);
-        ResultList<RelatedTopic> geoObjects = superTopic.getRelatedTopics("dm4.core.aggregation",
-            "dm4.core.child", "dm4.core.parent", "ka2.geo_object", 0);
+        Topic superTopic = dm4.getTopic(topicId);
+        List<RelatedTopic> geoObjects = superTopic.getRelatedTopics("dm4.core.aggregation",
+            "dm4.core.child", "dm4.core.parent", "ka2.geo_object");
         int missingMailboxes = 0;
         for (RelatedTopic geoObject : geoObjects) {
             SocialInstitutionObject institution = new SocialInstitutionObject();
@@ -299,7 +295,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         }
         logger.info("> Identified " + missingMailboxes +" Geo Objects without an "
                 + "Email-Address in the group of \"" + superTopic.getSimpleValue().toString()
-            + "\" (" + geoObjects.getSize() + ")");
+            + "\" (" + geoObjects.size() + ")");
         return results;
     }
 
@@ -324,7 +320,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Consumes(MediaType.TEXT_PLAIN)
     public Response createGeoObjectAttribution(@PathParam("topicId") long id, @PathParam("owner") String owner,
                                                String key) {
-        Topic geoObject = dms.getTopic(id);
+        Topic geoObject = dm4.getTopic(id);
         if (geoObject != null && !owner.isEmpty() && !key.isEmpty()) {
             String value = owner.trim();
             String keyValue = key.trim();
@@ -353,7 +349,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
                                               @QueryParam("clock") long clock) {
         GroupedGeoObjects result = new GroupedGeoObjects(clock);
         for (Topic criteria : getAllCriteria()) {
-            for (Topic category : dms.searchTopics("*" + searchTerm + "*", criteria.getUri())) {
+            for (Topic category : dm4.searchTopics("*" + searchTerm + "*", criteria.getUri())) {
                 result.add(criteria, category, getGeoObjectsByCategory(category.getId()));
             }
         }
@@ -374,7 +370,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             return;
         }
         //
-        ResultList<RelatedTopic> facetTypes = getFacetTypes();
+        List<RelatedTopic> facetTypes = getFacetTypes();
         if (facetTypes == null) {
             return;
         }
@@ -388,7 +384,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             return;
         }
         //
-        ResultList<RelatedTopic> facetTypes = getFacetTypes();
+        List<RelatedTopic> facetTypes = getFacetTypes();
         if (facetTypes == null) {
             return;
         }
@@ -403,8 +399,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
 
     private boolean hasSiteAssociation(Topic geoObject, long siteId) {
-        ResultList<RelatedTopic> sites = geoObject.getRelatedTopics("dm4.core.association", "dm4.core.default",
-            "dm4.core.default", WEBSITE, 0);
+        List<RelatedTopic> sites = geoObject.getRelatedTopics("dm4.core.association", "dm4.core.default",
+            "dm4.core.default", WEBSITE);
         for (RelatedTopic site : sites) {
             if (site.getId() == siteId) return true;
         }
@@ -413,7 +409,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     // === Enrich with facets ===
 
-    private void enrichWithFacets(Topic geoObject, ResultList<RelatedTopic> facetTypes) {
+    private void enrichWithFacets(Topic geoObject, List<RelatedTopic> facetTypes) {
         for (Topic facetType : facetTypes) {
             String facetTypeUri = facetType.getUri();
             if (!isMultiFacet(facetTypeUri)) {
@@ -443,7 +439,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     private void enrichWithMultiFacet(Topic geoObject, String facetTypeUri) {
-        ResultList<RelatedTopic> facetValues = facetsService.getFacets(geoObject, facetTypeUri);
+        List<RelatedTopic> facetValues = facetsService.getFacets(geoObject, facetTypeUri);
         logger.info("### Enriching geo object " + geoObject.getId() + " with its \"" + facetTypeUri +
             "\" facet values (" + facetValues + ")");
         String childTypeUri = getChildTypeUri(facetTypeUri);
@@ -456,7 +452,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     // === Update facets ===
 
-    private void updateFacets(Topic geoObject, ResultList<RelatedTopic> facetTypes, TopicModel newModel) {
+    private void updateFacets(Topic geoObject, List<RelatedTopic> facetTypes, TopicModel newModel) {
         for (Topic facetType : facetTypes) {
             String facetTypeUri = facetType.getUri();
             String childTypeUri = getChildTypeUri(facetTypeUri);
@@ -464,13 +460,13 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
                 TopicModel facetValue = newModel.getChildTopicsModel().getTopic(childTypeUri);
                 logger.info("### Storing facet of type \"" + facetTypeUri + "\" for geo object " + geoObject.getId() +
                     " (facetValue=" + facetValue + ")");
-                FacetValue value = new FacetValue(childTypeUri).put(facetValue);
+                FacetValueModel value = mf.newFacetValueModel(childTypeUri).put(facetValue);
                 facetsService.updateFacet(geoObject, facetTypeUri, value);
             } else {
-                List<RelatedTopicModel> facetValues = newModel.getChildTopicsModel().getTopics(childTypeUri);
+                List<? extends RelatedTopicModel> facetValues = newModel.getChildTopicsModel().getTopics(childTypeUri);
                 logger.info("### Storing facets of type \"" + facetTypeUri + "\" for geo object " + geoObject.getId() +
                     " (facetValues=" + facetValues + ")");
-                FacetValue value = new FacetValue(childTypeUri).put(facetValues);
+                FacetValueModel value = mf.newFacetValueModel(childTypeUri).put(facetValues);
                 facetsService.updateFacet(geoObject, facetTypeUri, value);
             }
         }
@@ -489,7 +485,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
      *
      * @return  The facet types (as a result set, may be empty), or <code>null</code>.
      */
-    private ResultList<RelatedTopic> getFacetTypes() {
+    private List<RelatedTopic> getFacetTypes() {
         Cookies cookies = Cookies.get();
         if (!cookies.has("dm4_topicmap_id")) {
             logger.fine("### Finding geo object facet types ABORTED -- topicmap is unknown (no \"dm4_topicmap_id\" " +
@@ -533,7 +529,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     private boolean isGeomap(long topicmapId) {
-        Topic topicmap = dms.getTopic(topicmapId);
+        Topic topicmap = dm4.getTopic(topicmapId);
         String rendererUri = topicmap.getChildTopics().getString("dm4.topicmaps.topicmap_renderer_uri");
         return rendererUri.equals("dm4.geomaps.geomap_renderer");
     }
@@ -553,6 +549,6 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     // ### FIXME: there is a copy in FacetsPlugin.java
     private AssociationDefinition getAssocDef(String facetTypeUri) {
         // Note: a facet type has exactly *one* association definition
-        return dms.getTopicType(facetTypeUri).getAssocDefs().iterator().next();
+        return dm4.getTopicType(facetTypeUri).getAssocDefs().iterator().next();
     }
 }
