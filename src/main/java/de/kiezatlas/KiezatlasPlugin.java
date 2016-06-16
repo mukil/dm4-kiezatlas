@@ -355,7 +355,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
      * or <code>null</code> if no geo coordinate is stored.
      */
     @Override
-    public Topic getGeoCoordinateTopic(Topic addressTopic) {
+    public Topic getGeoCoordinateFacet(Topic addressTopic) {
         Topic geoCoordTopic = facetsService.getFacet(addressTopic, "dm4.geomaps.geo_coordinate_facet");
         return geoCoordTopic != null ? geoCoordTopic.loadChildTopics() : null;
     }

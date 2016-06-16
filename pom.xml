@@ -16,9 +16,11 @@
         <version>4.8</version>
     </parent>
 
+    <!-- Attention: Before using this: `mvn clean package` will remove _all_ dm4-kiezatlas* jars
+         from your bundle-deploy dir not just this one.
     <properties>
         <dm4.deploy.dir>/home/malted/source/mikro/deepamehta/bundle-deploy</dm4.deploy.dir>
-    </properties>
+    </properties-->
 
     <dependencies>
         <dependency>
