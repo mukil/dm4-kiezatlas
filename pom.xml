@@ -51,7 +51,7 @@
         <dependency>
             <groupId>de.deepamehta</groupId>
             <artifactId>deepamehta-contacts</artifactId>
-            <version>4.7</version>
+            <version>4.8</version>
         </dependency>
     </dependencies>
 
