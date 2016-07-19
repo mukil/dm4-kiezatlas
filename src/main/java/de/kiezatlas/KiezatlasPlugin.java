@@ -47,9 +47,9 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     // The URIs of KA2 Geo Object topics have this prefix.
     // The remaining part of the URI is the original KA1 topic id.
-    private static final String KA2_GEO_OBJECT_URI_PREFIX = "de.kiezatlas.topic.";
-    private static final String GEO_OBJECT_OWNER_PROPERTY = "de.kiezatlas.owner";
-    private static final String GEO_OBJECT_KEYWORD_PROPERTY = "de.kiezatlas.key.";
+    public static final String KA2_GEO_OBJECT_URI_PREFIX = "de.kiezatlas.topic.";
+    public static final String GEO_OBJECT_OWNER_PROPERTY = "de.kiezatlas.owner";
+    public static final String GEO_OBJECT_KEYWORD_PROPERTY = "de.kiezatlas.key.";
 
     // Website-Geomap association
     private static final String WEBSITE_GEOMAP = "dm4.core.association";
@@ -192,7 +192,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     public GeoObjects searchGeoObjectNames(@QueryParam("search") String searchTerm, @QueryParam("clock") long clock) {
         GeoObjects result = new GeoObjects(clock);
         for (Topic geoObjectName : dm4.searchTopics("*" + searchTerm + "*", GEO_OBJECT_NAME)) {
-            result.add(getGeoObject(geoObjectName));
+            result.add(getGeoObjectByNameTopic(geoObjectName));
         }
         return result;
     }
@@ -200,6 +200,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @GET
     @Path("/einrichtungen/missing-bezirk")
     public List<SocialInstitutionObject> getInstitutionsMissingBezirk() {
+        checkAuthorization();
         logger.info("Fetching Social Institutions without a BEZIRK assignment");
         List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
         List<Topic> topics = dm4.getTopicsByType("ka2.geo_object");
@@ -221,6 +222,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @GET
     @Path("/einrichtungen/missing-link/")
     public List<SocialInstitutionObject> getInstitutionsMissingBacklink() {
+        checkAuthorization();
         logger.info("Fetching Social Institutions without a BEZIRK & BEZIRKSREGION assignment");
         List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
         List<Topic> topics = dm4.getTopicsByType("ka2.geo_object");
@@ -244,6 +246,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @GET
     @Path("/einrichtungen/{bezirksTopicId}")
     public List<SocialInstitutionObject> getSiteInstitutions(@PathParam("bezirksTopicId") long topicId) {
+        checkAuthorization();
         logger.info("Loading Social Institutions related to super Topic " + topicId);
         List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
         Topic superTopic = dm4.getTopic(topicId);
@@ -305,6 +308,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Transactional
     @Consumes(MediaType.TEXT_PLAIN)
     public Response createGeoObjectAttribution(@PathParam("topicId") long id, @PathParam("owner") String owner, String key) {
+        checkAuthorization();
         Topic geoObject = dm4.getTopic(id);
         if (geoObject != null && !owner.isEmpty() && !key.isEmpty()) {
             String value = owner.trim();
@@ -345,8 +349,20 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     public GeoCoordinate getGeoCoordinateByGeoObject(Topic geoObject) {
         Topic addressTopic = geoObject.getChildTopics().getTopic(GEO_OBJECT_ADDRESS);
         if (addressTopic != null) return geomapsService.getGeoCoordinate(addressTopic);
-        logger.warning("GeoCoordinate could not be determined becuase no Address is related to Geo Object: "
+        logger.warning("Geo Coordinate could not be determined becuase no Address is related to Geo Object: "
             + geoObject.getSimpleValue());
+        return null;
+    }
+
+    @Override
+    public Topic getGeoObjectByGeoCoordinateTopic(Topic geoCoords) {
+        Topic address = geoCoords.getRelatedTopic("dm4.core.composition", "dm4.core.child",
+                "dm4.core.parent", "dm4.contacts.address");
+        if (address != null) {
+            return address.getRelatedTopic("dm4.core.composition", "dm4.core.child",
+                "dm4.core.parent", "ka2.geo_object");
+        }
+        logger.warning("Geo Coordinate Facet Value Topic (ID: "+geoCoords.getId()+") has no related address topic.");
         return null;
     }
 
@@ -427,6 +443,14 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
 
     // ------------------------------------------------------------------------------------------------- Private Methods
+
+    private void checkAuthorization() {
+        String username = accessControlService.getUsername();
+        if (username == null || username.isEmpty()) {
+            throw new WebApplicationException(Response.Status.UNAUTHORIZED);
+        }
+        logger.info("Request Authorized for \"" + username + "\"");
+    }
 
     private Topic getFacettedContactChildTopic(Topic facettedTopic) {
         return facettedTopic.getRelatedTopic("dm4.core.composition", "dm4.core.parent",
@@ -563,7 +587,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     // ---
 
-    private Topic getGeoObject(Topic geoObjectName) {
+    private Topic getGeoObjectByNameTopic(Topic geoObjectName) {
         return geoObjectName.getRelatedTopic("dm4.core.composition", "dm4.core.child", "dm4.core.parent",
             GEO_OBJECT);   // ### TODO: Core API should provide type-driven navigation
     }
