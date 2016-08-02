@@ -38,6 +38,7 @@ Version History
 
 * Service methods to expand the Site---Geo Object relation
 * Added Geo Coordinate facet accessors to service
+* Introduced SocialInstitutionObject as (potential) "standard" DTO
 * Adapted to be compatible with DeepaMehta 4.8
 
 **2.1.7** -- Mar 9, 2016
