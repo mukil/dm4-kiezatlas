@@ -34,6 +34,18 @@ Usage
 Version History
 ---------------
 
+**2.1.8** -- Aug 2, 2016
+
+* Service methods to expand the Site---Geo Object relation
+* Added Geo Coordinate facet accessors to service
+* Adapted to be compatible with DeepaMehta 4.8
+
+**2.1.7** -- Mar 9, 2016
+
+* Added FULLTEXT_KEY index for geo object names (Migration2)
+* Introduced Kiezatlas Workspace and assign all types (Migration3)
+* Compatible with DeepaMehta 4.7
+
 **2.1.6** -- Dec 4, 2014
 
 * Add getAllCriteria() to Kiezatlas service.

@@ -16,6 +16,7 @@ public interface KiezatlasService {
     static final SharingMode KIEZATLAS_WORKSPACE_SHARING_MODE = SharingMode.PUBLIC;
 
     static final String WEBSITE         = "ka2.website";
+    static final String WEBSITE_TITLE   = "ka2.website.title";
     static final String GEO_OBJECT      = "ka2.geo_object";
     static final String GEO_OBJECT_NAME = "ka2.geo_object.name";
     static final String GEO_OBJECT_ADDRESS = "dm4.contacts.address";

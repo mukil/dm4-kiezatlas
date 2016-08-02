@@ -6,6 +6,7 @@ import de.deepamehta.core.TopicType;
 import de.deepamehta.core.service.Inject;
 import de.deepamehta.core.service.Migration;
 import de.deepamehta.workspaces.WorkspacesService;
+import de.kiezatlas.KiezatlasService;
 import static de.kiezatlas.KiezatlasService.KIEZATLAS_WORKSPACE_NAME;
 import static de.kiezatlas.KiezatlasService.KIEZATLAS_WORKSPACE_SHARING_MODE;
 import static de.kiezatlas.KiezatlasService.KIEZATLAS_WORKSPACE_URI;
@@ -30,11 +31,11 @@ public class Migration3 extends Migration {
     public void run() {
         Topic kiezatlas = workspaceService.createWorkspace(KIEZATLAS_WORKSPACE_NAME, KIEZATLAS_WORKSPACE_URI,
                 KIEZATLAS_WORKSPACE_SHARING_MODE);
-        accessControlService.setWorkspaceOwner(kiezatlas, "admin");
-        TopicType geoObject = dm4.getTopicType("ka2.geo_object");
-        TopicType geoObjectName = dm4.getTopicType("ka2.geo_object.name");
-        TopicType website = dm4.getTopicType("ka2.website");
-        TopicType websiteTitle = dm4.getTopicType("ka2.website.title");
+        accessControlService.setWorkspaceOwner(kiezatlas, AccessControlService.ADMIN_USERNAME);
+        TopicType geoObject = dm4.getTopicType(KiezatlasService.GEO_OBJECT);
+        TopicType geoObjectName = dm4.getTopicType(KiezatlasService.GEO_OBJECT_NAME);
+        TopicType website = dm4.getTopicType(KiezatlasService.WEBSITE);
+        TopicType websiteTitle = dm4.getTopicType(KiezatlasService.WEBSITE_TITLE);
         workspaceService.assignTypeToWorkspace(geoObject, kiezatlas.getId());
         workspaceService.assignTypeToWorkspace(geoObjectName, kiezatlas.getId());
         workspaceService.assignTypeToWorkspace(website, kiezatlas.getId());
