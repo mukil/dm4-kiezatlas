@@ -21,7 +21,6 @@ import de.deepamehta.core.util.DeepaMehtaUtils;
 import de.deepamehta.geomaps.model.GeoCoordinate;
 import de.deepamehta.time.TimeService;
 import de.deepamehta.workspaces.WorkspacesService;
-import java.io.InputStream;
 
 import javax.ws.rs.*;
 
@@ -29,8 +28,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 
 /**
@@ -58,6 +55,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     // Website-Facet Types association
     private static final String WEBSITE_FACET_TYPES = "dm4.core.association";
     private static final String ROLE_TYPE_FACET_TYPE = "dm4.core.default";
+    // Website-Geo Object association
+    private static final String WEBSITE_GEOOBJECT = "dm4.core.association";
 
     // ---------------------------------------------------------------------------------------------- Instance Variables
 
@@ -73,25 +72,14 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
 
 
+    /** ------------------------------------------ Plugin Service --------------------------------------------- */
+
     /**
-     * Fetches a simple page rendering objects for kiez-administrators.
-     * @return
+     * Useful to create a new or load an existing "Site" topic (by its uri).
+     * @param siteName
+     * @param siteUri
+     * @return A topic of type "ka2.website".
      */
-    @GET
-    @Path("/administration")
-    @Produces(MediaType.TEXT_HTML)
-    public InputStream getKiezatlasAdministrationPage() {
-        String username = accessControlService.getUsername();
-        if (username != null && !username.equals("admin")) throw new WebApplicationException(Response.Status.UNAUTHORIZED);
-        return getStaticResource("web/kiez-administration.html");
-    }
-
-
-
-    // **********************
-    // *** Plugin Service ***
-    // **********************
-
     @POST
     @Path("/create/{siteName}/{siteUri}")
     @Transactional
@@ -108,6 +96,12 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         return websiteTopic;
     }
 
+    /**
+     * Useful to create a standard association between a "Geo object" topic and a "Site" topic.
+     * @param geoObjectId
+     * @param siteId
+     * @return Association representing the relation between a Geo Object and a Site.
+     */
     @POST
     @Path("/add/{geoObjectId}/{siteId}")
     @Transactional
@@ -117,7 +111,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         Association relation = null;
         if (!hasSiteAssociation(geoObject, siteId)) {
             logger.info("Adding Geo Object \"" + geoObject.getSimpleValue() + "\" to Site Topic: " + siteId);
-            relation = dm4.createAssociation(mf.newAssociationModel("dm4.core.association",
+            relation = dm4.createAssociation(mf.newAssociationModel(WEBSITE_GEOOBJECT,
                 mf.newTopicRoleModel(geoObjectId, "dm4.core.default"), mf.newTopicRoleModel(siteId, "dm4.core.default")));
         } else {
             logger.info("Skipping adding Topic to Site, Association already EXISTS");
@@ -197,113 +191,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         return result;
     }
 
-    @GET
-    @Path("/einrichtungen/missing-bezirk")
-    public List<SocialInstitutionObject> getInstitutionsMissingBezirk() {
-        checkAuthorization();
-        logger.info("Fetching Social Institutions without a BEZIRK assignment");
-        List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
-        List<Topic> topics = dm4.getTopicsByType("ka2.geo_object");
-        for (Topic geoObject : topics) {
-            SocialInstitutionObject institution = new SocialInstitutionObject();
-            institution.setName(geoObject.getSimpleValue().toString()); // ### load child topic "ka2.geo_object.name"
-            Topic bezirk = getFacettedBezirkChildTopic(geoObject);
-            if (bezirk == null) {
-                logger.warning("> Bezirks Relation is missing for " + geoObject.getSimpleValue());
-                institution.setCreated(timeService.getCreationTime(geoObject.getId()));
-                institution.setLastModified(timeService.getModificationTime(geoObject.getId()));
-                institution.setUri(geoObject.getUri());
-                results.add(institution);
-            }
-        }
-        return results;
-    }
-
-    @GET
-    @Path("/einrichtungen/missing-link/")
-    public List<SocialInstitutionObject> getInstitutionsMissingBacklink() {
-        checkAuthorization();
-        logger.info("Fetching Social Institutions without a BEZIRK & BEZIRKSREGION assignment");
-        List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
-        List<Topic> topics = dm4.getTopicsByType("ka2.geo_object");
-        for (Topic geoObject : topics) {
-            SocialInstitutionObject institution = new SocialInstitutionObject();
-            institution.setName(geoObject.getSimpleValue().toString()); // ### load child topic "ka2.geo_object.name"
-            Topic bezirk = getFacettedBezirkChildTopic(geoObject);
-            Topic bezirksregion = getFacettedBezirksregionChildTopic(geoObject);
-            if (bezirk == null && bezirksregion == null) {
-                logger.warning("> Bezirks and Bezirksregion Relation is missing for " + geoObject.getSimpleValue());
-                institution.setCreated(timeService.getCreationTime(geoObject.getId()));
-                institution.setLastModified(timeService.getModificationTime(geoObject.getId()));
-                institution.setUri(geoObject.getUri());
-                results.add(institution);
-            }
-        }
-        return results;
-    }
-
-    // Note: Fetch and build up administrative response objects
-    @GET
-    @Path("/einrichtungen/{bezirksTopicId}")
-    public List<SocialInstitutionObject> getSiteInstitutions(@PathParam("bezirksTopicId") long topicId) {
-        checkAuthorization();
-        logger.info("Loading Social Institutions related to super Topic " + topicId);
-        List<SocialInstitutionObject> results = new ArrayList<SocialInstitutionObject>();
-        Topic superTopic = dm4.getTopic(topicId);
-        List<RelatedTopic> geoObjects = superTopic.getRelatedTopics("dm4.core.aggregation",
-            "dm4.core.child", "dm4.core.parent", "ka2.geo_object");
-        int missingMailboxes = 0;
-        for (RelatedTopic geoObject : geoObjects) {
-            SocialInstitutionObject institution = new SocialInstitutionObject();
-            geoObject.loadChildTopics("dm4.contacts.address");
-            RelatedTopic address = geoObject.getChildTopics().getTopic("dm4.contacts.address");
-            Topic contactTopic = getFacettedContactChildTopic(geoObject);
-            String contactValue = "k.A.";
-            boolean missesMailbox = false;
-            if (contactTopic != null) {
-                contactTopic.loadChildTopics();
-                Topic eMail = contactTopic.getChildTopics().getTopic("ka2.kontakt.email");
-                if (eMail != null && !eMail.getSimpleValue().toString().isEmpty()) {
-                    contactValue = eMail.getSimpleValue().toString();
-                } else {
-                    missesMailbox = true;
-                    Topic phone = contactTopic.getChildTopics().getTopic("ka2.kontakt.telefon");
-                    if (phone != null && !phone.getSimpleValue().toString().isEmpty()) {
-                        contactValue = phone.getSimpleValue().toString();
-                    }
-                }
-            }
-            GeoCoordinate coordinates = geomapsService.getGeoCoordinate(address);
-            if (coordinates != null) {
-                institution.setGeoCoordinate(coordinates);
-            } else {
-                institution.addClassification("no-coordinates");
-                logger.info("> Geo Coordinates unavailable on \"" + geoObject.getSimpleValue().toString() + "\", Address: " + address.getSimpleValue());
-            }
-            if (missesMailbox) {
-                // logger.info("> Identified missing Email Address at " + geoObject.getSimpleValue().toString());
-                missingMailboxes++;
-                institution.addClassification("no-email");
-            }
-            Topic bezirksregion = getFacettedBezirksregionChildTopic(geoObject);
-            if (bezirksregion == null) {
-                logger.warning("> No Bezirksregion set on \"" + geoObject.getSimpleValue().toString() + "\"");
-                institution.addClassification("no-bezirksregion");
-            }
-            institution.setName(geoObject.getSimpleValue().toString()); // ### load child topic "ka2.geo_object.name"
-            institution.setContact(contactValue);
-            institution.setAddress(address.getSimpleValue().toString());
-            institution.setCreated(timeService.getCreationTime(geoObject.getId()));
-            institution.setLastModified(timeService.getModificationTime(geoObject.getId()));
-            results.add(institution);
-        }
-        logger.info("> Identified " + missingMailboxes +" Geo Objects without an "
-                + "Email-Address in the group of \"" + superTopic.getSimpleValue().toString()
-            + "\" (" + geoObjects.size() + ")");
-        return results;
-    }
-
-    @PUT
+    /** @PUT
     @Path("/geoobject/attribution/{topicId}/{owner}")
     @Transactional
     @Consumes(MediaType.TEXT_PLAIN)
@@ -329,7 +217,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             return Response.status(405).build();
         }
         return Response.status(404).build();
-    }
+    } **/
 
     @GET
     @Path("/category/objects")
@@ -344,6 +232,33 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         }
         return result;
     }
+
+
+
+    /** ---------------------------------- Kiezatlas ETL Plugin Service Helper Methods ------------------------- */
+
+    /** Note: This facet depends on the installation of the dm4-kiezatlas-etl plugin. */
+    @Override
+    public Topic getImageFileFacetByGeoObject(Topic geoObject) {
+        return facetsService.getFacet(geoObject, "ka2.bild.facet");
+    }
+
+    /** Note: This facet depends on the installation of the dm4-kiezatlas-etl plugin. */
+    @Override
+    public void updateImageFileFacet(Topic geoObject, String imageFilePath) {
+        facetsService.updateFacet(geoObject, "ka2.bild.facet", mf.newFacetValueModel("ka2.bild.pfad").put(imageFilePath));
+    }
+
+    /** This facet depends/just exists after installation of the dm4-kiezatlas-etl plugin. */
+    @Override
+    public Topic getFacettedBezirksregionChildTopic(Topic facettedTopic) {
+        // Note: Untested
+        return facetsService.getFacet(facettedTopic, "ka2.bezirksregion.facet");
+    }
+
+
+
+    /** -------------------------------------- Kiezatlas Geo Object Helper Methods ----------------------------- */
 
     @Override
     public GeoCoordinate getGeoCoordinateByGeoObject(Topic geoObject) {
@@ -367,7 +282,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     /**
-     * Returns the Geo Coordinate topic (including its child topics) of a geo-facetted topic (e.g. an Address),
+     * @retrun A Geo Coordinate topic (including its child topics) of a geo-facetted topic (e.g. an Address),
      * or <code>null</code> if no geo coordinate is stored.
      */
     @Override
@@ -377,40 +292,24 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     @Override
-    public String getGeoObjectAttribution(Topic geoObject) {
-        return (String) geoObject.getProperty(GEO_OBJECT_OWNER_PROPERTY) + ":"
-            + (String) geoObject.getProperty(GEO_OBJECT_KEYWORD_PROPERTY);
-    }
-
-    /** This facet depends/just exists after installation of the dm4-kiezatlas-etl plugin. */
-    @Override
-    public Topic getFacettedBezirksregionChildTopic(Topic facettedTopic) {
-        // Note: Untested
-        return facetsService.getFacet(facettedTopic, "ka2.bezirksregion.facet");
-    }
-
-    /** This facet depends/just exists after installation of the dm4-kiezatlas-etl plugin. */
-    @Override
-    public Topic getImageFileFacetByGeoObject(Topic geoObject) {
-        return facetsService.getFacet(geoObject, "ka2.bild.facet");
-    }
-
-    @Override
     public List<RelatedTopic> getParentRelatedAggregatedGeoObjects(Topic bezirksFacet) {
         return bezirksFacet.getRelatedTopics("dm4.core.aggregation", "dm4.core.child",
             "dm4.core.parent", "ka2.geo_object");
     }
 
+    /**
+     * @param geoObject
+     * @return A string representing information on the original owner of a kiezatlas 1 einrichtungs topic with two
+     * values seperated by a colon "owner:keyword".
     @Override
-    public void updateImageFileFacet(Topic geoObject, String imageFilePath) {
-        facetsService.updateFacet(geoObject, "ka2.bild.facet", mf.newFacetValueModel("ka2.bild.pfad").put(imageFilePath));
-    }
-
-    // ********************************
-    // *** Listener Implementations ***
-    // ********************************
+    public String getGeoObjectAttribution(Topic geoObject) {
+        return (String) geoObject.getProperty(GEO_OBJECT_OWNER_PROPERTY) + ":"
+            + (String) geoObject.getProperty(GEO_OBJECT_KEYWORD_PROPERTY);
+    } **/
 
 
+
+    /** ------------------------------------------ Listener Implementations ------------------------------------ */
 
     @Override
     public void preSendTopic(Topic topic) {
@@ -442,34 +341,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
 
 
-    // ------------------------------------------------------------------------------------------------- Private Methods
-
-    private void checkAuthorization() {
-        String username = accessControlService.getUsername();
-        if (username == null || username.isEmpty()) {
-            throw new WebApplicationException(Response.Status.UNAUTHORIZED);
-        }
-        logger.info("Request Authorized for \"" + username + "\"");
-    }
-
-    private Topic getFacettedContactChildTopic(Topic facettedTopic) {
-        return facettedTopic.getRelatedTopic("dm4.core.composition", "dm4.core.parent",
-            "dm4.core.child", "ka2.kontakt");
-    }
-
-    private Topic getFacettedBezirkChildTopic(Topic facettedTopic) {
-        return facettedTopic.getRelatedTopic("dm4.core.aggregation", "dm4.core.parent",
-            "dm4.core.child", "ka2.bezirk");
-    }
-
-    private boolean hasSiteAssociation(Topic geoObject, long siteId) {
-        List<RelatedTopic> sites = geoObject.getRelatedTopics("dm4.core.association", "dm4.core.default",
-            "dm4.core.default", WEBSITE);
-        for (RelatedTopic site : sites) {
-            if (site.getId() == siteId) return true;
-        }
-        return false;
-    }
+    /* ---------------------------------------------------------- Private Methods ---------------------------------- */
 
     // === Enrich with facets ===
 
@@ -509,7 +381,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         String childTypeUri = getChildTypeUri(facetTypeUri);
         // Note: we set the facet values at once (using put()) instead of iterating (and using add()) as after an geo
         // object update request the facet values are already set. Using add() would result in having the values twice.
-        geoObject.getChildTopics().getModel().put(childTypeUri, DeepaMehtaUtils.toModelList(facetValues));
+        geoObject.getChildTopics().getModel().put(childTypeUri, DeepaMehtaUtils.toTopicModels(facetValues));
     }
 
 
@@ -586,6 +458,23 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     // ---
+
+    /** private void checkAuthorization() {
+        String username = accessControlService.getUsername();
+        if (username == null || username.isEmpty()) {
+            throw new WebApplicationException(Response.Status.UNAUTHORIZED);
+        }
+        logger.info("Request Authorized for \"" + username + "\"");
+    } */
+
+    private boolean hasSiteAssociation(Topic geoObject, long siteId) {
+        List<RelatedTopic> sites = geoObject.getRelatedTopics("dm4.core.association", "dm4.core.default",
+            "dm4.core.default", WEBSITE);
+        for (RelatedTopic site : sites) {
+            if (site.getId() == siteId) return true;
+        }
+        return false;
+    }
 
     private Topic getGeoObjectByNameTopic(Topic geoObjectName) {
         return geoObjectName.getRelatedTopic("dm4.core.composition", "dm4.core.child", "dm4.core.parent",

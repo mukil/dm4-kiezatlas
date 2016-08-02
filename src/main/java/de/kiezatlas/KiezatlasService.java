@@ -85,6 +85,6 @@ public interface KiezatlasService {
 
     Topic getFacettedBezirksregionChildTopic(Topic facettedTopic);
 
-    String getGeoObjectAttribution(Topic geoObject);
+    /** String getGeoObjectAttribution(Topic geoObject); */
 
 }
