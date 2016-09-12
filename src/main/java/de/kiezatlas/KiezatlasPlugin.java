@@ -270,15 +270,31 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     @Override
-    public Topic getGeoObjectByGeoCoordinateTopic(Topic geoCoords) {
-        Topic address = geoCoords.getRelatedTopic("dm4.core.composition", "dm4.core.child",
+    public Topic getGeoObjectByGeoCoordinate(Topic geoCoords) {
+        Topic address = null, geoObject = null;
+        try {
+            address = geoCoords.getRelatedTopic("dm4.core.composition", "dm4.core.child",
                 "dm4.core.parent", "dm4.contacts.address");
-        if (address != null) {
-            return address.getRelatedTopic("dm4.core.composition", "dm4.core.child",
-                "dm4.core.parent", "ka2.geo_object");
+            if (address != null) {
+                geoObject = address.getRelatedTopic("dm4.core.composition", "dm4.core.child", "dm4.core.parent", "ka2.geo_object");
+            }
+        } catch(RuntimeException ex) {
+            logger.warning("Could not load Geo Object for Geo Coordinate (" + geoCoords
+                + "), Exception: " + ex.getMessage());
         }
-        logger.warning("Geo Coordinate Facet Value Topic (ID: "+geoCoords.getId()+") has no related address topic.");
-        return null;
+        return geoObject;
+    }
+
+    @Override
+    public Topic getDomainTopicByGeoCoordinate(Topic geoCoords) {
+        Topic geoObject = null;
+        try {
+            geoObject = geomapsService.getDomainTopic(geoCoords.getId());
+        } catch(RuntimeException ex) {
+            logger.warning("Could not load Geo Object for Geo Coordinate (" + geoCoords
+                + "), Exception: " + ex.getMessage());
+        }
+        return geoObject;
     }
 
     /**
