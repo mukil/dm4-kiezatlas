@@ -76,7 +76,10 @@ public interface KiezatlasService {
     Topic getGeoCoordinateFacet(Topic address);
 
     /** Fetches a Geo Object by a Geo Coordinate topic. */
-    Topic getGeoObjectByGeoCoordinateTopic(Topic geoCoords);
+    Topic getGeoObjectByGeoCoordinate(Topic geoCoords);
+
+    /** Fetches the domain topic a Geo Coordinate topic. */
+    Topic getDomainTopicByGeoCoordinate(Topic geoCoords);
 
     List<RelatedTopic> getParentRelatedAggregatedGeoObjects(Topic bezirksFacet);
 
