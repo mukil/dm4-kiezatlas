@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
+import javax.ws.rs.core.Response;
 
 
 /**
@@ -68,6 +69,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     private Logger logger = Logger.getLogger(getClass().getName());
 
+    Topic kiezatlasWorkspace = null;
+
     // -------------------------------------------------------------------------------------------------- Public Methods
 
 
@@ -83,17 +86,25 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @POST
     @Path("/create/{siteName}/{siteUri}")
     @Transactional
-    @Override
     public Topic createWebsite(@PathParam("siteName") String siteName, @PathParam("siteUri") String siteUri) {
-        Topic websiteTopic = dm4.getTopicByValue("uri", new SimpleValue(siteUri));
-        if (websiteTopic == null) {
-            logger.info("Creating Kiezatlas Website \"" + siteName + " with siteUri=\"" + siteUri + "\"");
-            websiteTopic = dm4.createTopic(mf.newTopicModel(siteUri, WEBSITE, mf.newChildTopicsModel()
-                .put("ka2.website.title", siteName)));
-        } else {
-            logger.info("Kiezatlas Website with siteUri=\"" + siteUri + "\" already exists");
-        }
-        return websiteTopic;
+        isAuthorized();
+        return createKiezatlasWebsite(siteName, siteUri);
+    }
+
+    /**
+     * Useful to create a standard association between a "Geo object" topic and a "Site" topic.
+     * @param geoObjectId
+     * @param siteId
+     * @return Association representing the relation between a Geo Object and a Site.
+     */
+    @DELETE
+    @Path("/{geoObjectId}/{siteId}")
+    @Transactional
+    public void removeGeoObjectFromWebsite(@PathParam("geoObjectId") long geoObjectId, @PathParam("siteId") long siteId) {
+        isAuthorized();
+        Topic geoObject = dm4.getTopic(geoObjectId);
+        Topic siteTopic = dm4.getTopic(siteId);
+        removeGeoObjectFromWebsite(geoObject, siteTopic);
     }
 
     /**
@@ -103,20 +114,13 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
      * @return Association representing the relation between a Geo Object and a Site.
      */
     @POST
-    @Path("/add/{geoObjectId}/{siteId}")
+    @Path("/{geoObjectId}/{siteId}")
     @Transactional
-    @Override
     public Association addGeoObjectToWebsite(@PathParam("geoObjectId") long geoObjectId, @PathParam("siteId") long siteId) {
+        isAuthorized();
         Topic geoObject = dm4.getTopic(geoObjectId);
-        Association relation = null;
-        if (!hasSiteAssociation(geoObject, siteId)) {
-            logger.info("Adding Geo Object \"" + geoObject.getSimpleValue() + "\" to Site Topic: " + siteId);
-            relation = dm4.createAssociation(mf.newAssociationModel(WEBSITE_GEOOBJECT,
-                mf.newTopicRoleModel(geoObjectId, "dm4.core.default"), mf.newTopicRoleModel(siteId, "dm4.core.default")));
-        } else {
-            logger.info("Skipping adding Topic to Site, Association already EXISTS");
-        }
-        return relation;
+        Topic siteTopic = dm4.getTopic(siteId);
+        return addGeoObjectToWebsite(geoObject, siteTopic);
     }
 
     @GET
@@ -233,7 +237,55 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         return result;
     }
 
+    @GET
+    @Path("/workspace")
+    public long getKiezatlasWorkspaceId() {
+        if (kiezatlasWorkspace != null) return kiezatlasWorkspace.getId();
+        kiezatlasWorkspace = dm4.getTopicByUri(KIEZATLAS_WORKSPACE_URI);
+        return kiezatlasWorkspace.getId();
+    }
 
+    @Override
+    public Topic createKiezatlasWebsite(String siteName, String siteUri) {
+        Topic websiteTopic = dm4.getTopicByValue("uri", new SimpleValue(siteUri));
+        if (websiteTopic == null) {
+            logger.info("CREATING Kiezatlas Website \"" + siteName + " with siteUri=\"" + siteUri + "\"");
+            websiteTopic = dm4.createTopic(mf.newTopicModel(siteUri, WEBSITE, mf.newChildTopicsModel()
+                .put("ka2.website.title", siteName)));
+        } else {
+            logger.info("Kiezatlas Website with siteUri=\"" + siteUri + "\" already exists");
+        }
+        return websiteTopic;
+    }
+
+    @Override
+    public Association addGeoObjectToWebsite(Topic geoObject, Topic website) {
+        Association relation = null;
+        if (geoObject.getTypeUri().equals(GEO_OBJECT) && website.getTypeUri().equals(WEBSITE)) {
+            if (!isAssignedToWebsite(geoObject, website.getId())) {
+                logger.info("ADDING Geo Object \"" + geoObject.getSimpleValue() + "\" to Site \"" + website.getSimpleValue() + "\"");
+                relation = dm4.createAssociation(mf.newAssociationModel(WEBSITE_GEOOBJECT,
+                    mf.newTopicRoleModel(geoObject.getId(), "dm4.core.default"), mf.newTopicRoleModel(website.getId(), "dm4.core.default")));
+            } else {
+                logger.info("Skipping adding Geo Object to Site, Assignment already EXISTS");
+            }
+        }
+        return relation;
+    }
+
+    @Override
+    public void removeGeoObjectFromWebsite(Topic geoObject, Topic website) {
+        if (geoObject.getTypeUri().equals(GEO_OBJECT) && website.getTypeUri().equals(WEBSITE)) {
+            if (isAssignedToWebsite(geoObject, website.getId())) {
+                logger.info("REMOVING Geo Object \"" + geoObject.getSimpleValue() + "\" from Site \"" + website.getSimpleValue() + "\"");
+                Association assignment = dm4.getAssociation("dm4.core.association", geoObject.getId(), website.getId(),
+                    "dm4.core.default", "dm4.core.default");
+                assignment.delete();
+            } else {
+                logger.info("Skipping removal of Geo Object from Site, Assignment does not EXIST");
+            }
+        }
+    }
 
     /** ---------------------------------- Kiezatlas ETL Plugin Service Helper Methods ------------------------- */
 
@@ -313,6 +365,11 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             "dm4.core.parent", "ka2.geo_object");
     }
 
+    @Override
+    public boolean isAssignedToKiezatlasWebsite(Topic geoObject, Topic website) {
+        return isAssignedToWebsite(geoObject, website.getId());
+    }
+
     /**
      * @param geoObject
      * @return A string representing information on the original owner of a kiezatlas 1 einrichtungs topic with two
@@ -358,6 +415,19 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
 
     /* ---------------------------------------------------------- Private Methods ---------------------------------- */
+
+    /**
+     * First checks for a valid session and then it checks fo for a "Membership" association between the
+     * requesting username and the \"Kiezatlas\" workspace.
+     **/
+    private void isAuthorized() throws WebApplicationException {
+        String username = accessControlService.getUsername();
+        if (username == null) throw new WebApplicationException(Response.Status.UNAUTHORIZED);
+        if (kiezatlasWorkspace == null) getKiezatlasWorkspaceId();
+        if (!accessControlService.isMember(username, kiezatlasWorkspace.getId())) {
+            throw new WebApplicationException(Response.Status.UNAUTHORIZED);
+        }
+    }
 
     // === Enrich with facets ===
 
@@ -483,7 +553,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         logger.info("Request Authorized for \"" + username + "\"");
     } */
 
-    private boolean hasSiteAssociation(Topic geoObject, long siteId) {
+    private boolean isAssignedToWebsite(Topic geoObject, long siteId) {
         List<RelatedTopic> sites = geoObject.getRelatedTopics("dm4.core.association", "dm4.core.default",
             "dm4.core.default", WEBSITE);
         for (RelatedTopic site : sites) {

@@ -65,9 +65,13 @@ public interface KiezatlasService {
      */
     GroupedGeoObjects searchCategories(String searchTerm, long clock);
 
-    Topic createWebsite(String siteName, String siteUri);
+    Topic createKiezatlasWebsite(String siteName, String siteUri);
 
-    Association addGeoObjectToWebsite(long geoObjectId, long siteId);
+    Association addGeoObjectToWebsite(Topic geoObject, Topic website);
+
+    void removeGeoObjectFromWebsite(Topic geoObject, Topic website);
+
+    boolean isAssignedToKiezatlasWebsite(Topic geoObject, Topic website);
 
     /** Fetches Geo Coordinate facet related to a Geo Objects topic. */
     GeoCoordinate getGeoCoordinateByGeoObject(Topic geoObject);
