@@ -6,6 +6,7 @@ import de.deepamehta.core.Topic;
 import de.deepamehta.core.service.accesscontrol.SharingMode;
 import de.deepamehta.geomaps.model.GeoCoordinate;
 import java.util.List;
+import javax.ws.rs.PathParam;
 
 
 
@@ -42,6 +43,11 @@ public interface KiezatlasService {
      * Returns all Geo Objects assigned to the given geomap.
      */
     List<Topic> getGeoObjects(long geomapId);
+
+    /**
+     * Returns all Geo Objects assigned to the given website.
+     */
+    List<RelatedTopic> getGeoObjectsBySite(@PathParam("siteId") long siteId);
 
     /**
      * Returns all Geo Objects assigned to the given category.

@@ -58,6 +58,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     private static final String ROLE_TYPE_FACET_TYPE = "dm4.core.default";
     // Website-Geo Object association
     private static final String WEBSITE_GEOOBJECT = "dm4.core.association";
+    private static final String ROLE_TYPE_GEOOBJECT = "dm4.core.parent";
+    private static final String ROLE_TYPE_SITE = "dm4.core.child";
 
     // ---------------------------------------------------------------------------------------------- Instance Variables
 
@@ -100,7 +102,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @DELETE
     @Path("/{geoObjectId}/{siteId}")
     @Transactional
-    public void removeGeoObjectFromWebsite(@PathParam("geoObjectId") long geoObjectId, @PathParam("siteId") long siteId) {
+    public void removeGeoObjectFromWebsite(@PathParam("geoObjectId") long geoObjectId,
+                                           @PathParam("siteId") long siteId) {
         isAuthorized();
         Topic geoObject = dm4.getTopic(geoObjectId);
         Topic siteTopic = dm4.getTopic(siteId);
@@ -116,7 +119,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @POST
     @Path("/{geoObjectId}/{siteId}")
     @Transactional
-    public Association addGeoObjectToWebsite(@PathParam("geoObjectId") long geoObjectId, @PathParam("siteId") long siteId) {
+    public Association addGeoObjectToWebsite(@PathParam("geoObjectId") long geoObjectId,
+            @PathParam("siteId") long siteId) {
         isAuthorized();
         Topic geoObject = dm4.getTopic(geoObjectId);
         Topic siteTopic = dm4.getTopic(siteId);
@@ -144,6 +148,22 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
                 ROLE_TYPE_FACET_TYPE, "dm4.core.topic_type");
         } catch (Exception e) {
             throw new RuntimeException("Finding the website's facet types failed (websiteId=" + websiteId + ")", e);
+        }
+    }
+
+    @GET
+    @Path("/website/{siteId}/objects")
+    @Override
+    public List<RelatedTopic> getGeoObjectsBySite(@PathParam("siteId") long siteId) {
+        try {
+            Topic site = dm4.getTopic(siteId);
+            List<RelatedTopic> geoObjects = null;
+            if (site.getTypeUri().equals("ka2.website")) {
+                geoObjects = site.getRelatedTopics(WEBSITE_GEOOBJECT, ROLE_TYPE_SITE, ROLE_TYPE_GEOOBJECT, GEO_OBJECT);
+            }
+            return geoObjects;
+        } catch (Exception e) {
+            throw new RuntimeException("Fetching the website's geo objects failed (siteId=" + siteId + ")", e);
         }
     }
 
@@ -199,7 +219,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Path("/geoobject/attribution/{topicId}/{owner}")
     @Transactional
     @Consumes(MediaType.TEXT_PLAIN)
-    public Response createGeoObjectAttribution(@PathParam("topicId") long id, @PathParam("owner") String owner, String key) {
+    public Response createGeoObjectAttribution(@PathParam("topicId") long id,
+                                               @PathParam("owner") String owner, String key) {
         checkAuthorization();
         Topic geoObject = dm4.getTopic(id);
         if (geoObject != null && !owner.isEmpty() && !key.isEmpty()) {
@@ -263,9 +284,11 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         Association relation = null;
         if (geoObject.getTypeUri().equals(GEO_OBJECT) && website.getTypeUri().equals(WEBSITE)) {
             if (!isAssignedToWebsite(geoObject, website.getId())) {
-                logger.info("ADDING Geo Object \"" + geoObject.getSimpleValue() + "\" to Site \"" + website.getSimpleValue() + "\"");
+                logger.info("ADDING Geo Object \"" + geoObject.getSimpleValue()
+                    + "\" to Site \"" + website.getSimpleValue() + "\"");
                 relation = dm4.createAssociation(mf.newAssociationModel(WEBSITE_GEOOBJECT,
-                    mf.newTopicRoleModel(geoObject.getId(), "dm4.core.default"), mf.newTopicRoleModel(website.getId(), "dm4.core.default")));
+                    mf.newTopicRoleModel(geoObject.getId(), ROLE_TYPE_GEOOBJECT),
+                    mf.newTopicRoleModel(website.getId(), ROLE_TYPE_SITE)));
             } else {
                 logger.info("Skipping adding Geo Object to Site, Assignment already EXISTS");
             }
@@ -277,9 +300,10 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     public void removeGeoObjectFromWebsite(Topic geoObject, Topic website) {
         if (geoObject.getTypeUri().equals(GEO_OBJECT) && website.getTypeUri().equals(WEBSITE)) {
             if (isAssignedToWebsite(geoObject, website.getId())) {
-                logger.info("REMOVING Geo Object \"" + geoObject.getSimpleValue() + "\" from Site \"" + website.getSimpleValue() + "\"");
-                Association assignment = dm4.getAssociation("dm4.core.association", geoObject.getId(), website.getId(),
-                    "dm4.core.default", "dm4.core.default");
+                logger.info("REMOVING Geo Object \"" + geoObject.getSimpleValue()
+                    + "\" from Site \"" + website.getSimpleValue() + "\"");
+                Association assignment = dm4.getAssociation(WEBSITE_GEOOBJECT, geoObject.getId(), website.getId(),
+                    ROLE_TYPE_GEOOBJECT, ROLE_TYPE_SITE);
                 assignment.delete();
             } else {
                 logger.info("Skipping removal of Geo Object from Site, Assignment does not EXIST");
@@ -298,7 +322,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     /** Note: This facet depends on the installation of the dm4-kiezatlas-etl plugin. */
     @Override
     public void updateImageFileFacet(Topic geoObject, String imageFilePath) {
-        facetsService.updateFacet(geoObject, "ka2.bild.facet", mf.newFacetValueModel("ka2.bild.pfad").put(imageFilePath));
+        facetsService.updateFacet(geoObject, "ka2.bild.facet",
+            mf.newFacetValueModel("ka2.bild.pfad").put(imageFilePath));
     }
 
     /** This facet depends/just exists after installation of the dm4-kiezatlas-etl plugin. */
@@ -328,7 +353,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             address = geoCoords.getRelatedTopic("dm4.core.composition", "dm4.core.child",
                 "dm4.core.parent", "dm4.contacts.address");
             if (address != null) {
-                geoObject = address.getRelatedTopic("dm4.core.composition", "dm4.core.child", "dm4.core.parent", "ka2.geo_object");
+                geoObject = address.getRelatedTopic("dm4.core.composition", "dm4.core.child",
+                    "dm4.core.parent", "ka2.geo_object");
             }
         } catch(RuntimeException ex) {
             logger.warning("Could not load Geo Object for Geo Coordinate (" + geoCoords
@@ -554,8 +580,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     } */
 
     private boolean isAssignedToWebsite(Topic geoObject, long siteId) {
-        List<RelatedTopic> sites = geoObject.getRelatedTopics("dm4.core.association", "dm4.core.default",
-            "dm4.core.default", WEBSITE);
+        List<RelatedTopic> sites = geoObject.getRelatedTopics(WEBSITE_GEOOBJECT, "dm4.core.parent",
+            "dm4.core.child", WEBSITE);
         for (RelatedTopic site : sites) {
             if (site.getId() == siteId) return true;
         }
