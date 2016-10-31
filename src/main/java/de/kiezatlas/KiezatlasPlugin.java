@@ -493,7 +493,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         String childTypeUri = getChildTypeUri(facetTypeUri);
         // Note: we set the facet values at once (using put()) instead of iterating (and using add()) as after an geo
         // object update request the facet values are already set. Using add() would result in having the values twice.
-        geoObject.getChildTopics().getModel().put(childTypeUri, DeepaMehtaUtils.toModelList(facetValues));
+        geoObject.getChildTopics().getModel().put(childTypeUri, DeepaMehtaUtils.<RelatedTopicModel>toModelList(facetValues));
     }
 
 
