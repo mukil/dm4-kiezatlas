@@ -79,8 +79,12 @@ public interface KiezatlasService {
 
     boolean isAssignedToKiezatlasWebsite(Topic geoObject, Topic website);
 
+    boolean isKiezatlasWorkspaceMember();
+
     /** Fetches Geo Coordinate facet related to a Geo Objects topic. */
     GeoCoordinate getGeoCoordinateByGeoObject(Topic geoObject);
+
+    Topic enrichWithFacets(Topic geoObject, long websiteId);
 
     /** Fetches the Geo Coordinate topic related to a Geo Objects Address (!) topic. */
     Topic getGeoCoordinateFacet(Topic address);

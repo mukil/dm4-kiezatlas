@@ -259,6 +259,13 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     @GET
+    @Path("/user")
+    public String getKiezatlasWorkspaceMember() {
+        isAuthorized();
+        return accessControlService.getUsername();
+    }
+
+    @GET
     @Path("/workspace")
     public long getKiezatlasWorkspaceId() {
         if (kiezatlasWorkspace != null) return kiezatlasWorkspace.getId();
@@ -396,6 +403,13 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         return isAssignedToWebsite(geoObject, website.getId());
     }
 
+    @Override
+    public boolean isKiezatlasWorkspaceMember() {
+        String username = accessControlService.getUsername();
+        if (kiezatlasWorkspace == null) getKiezatlasWorkspaceId();
+        return accessControlService.isMember(username, kiezatlasWorkspace.getId());
+    }
+
     /**
      * @param geoObject
      * @return A string representing information on the original owner of a kiezatlas 1 einrichtungs topic with two
@@ -406,6 +420,15 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             + (String) geoObject.getProperty(GEO_OBJECT_KEYWORD_PROPERTY);
     } **/
 
+    @Override
+    public Topic enrichWithFacets(Topic geoObject, long websiteId) {
+        List<RelatedTopic> facetTypes = getFacetTypes(websiteId);
+        if (facetTypes == null) {
+            return null;
+        }
+        enrichWithFacets(geoObject, facetTypes);
+        return geoObject;
+    }
 
 
     /** ------------------------------------------ Listener Implementations ------------------------------------ */
@@ -449,8 +472,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     private void isAuthorized() throws WebApplicationException {
         String username = accessControlService.getUsername();
         if (username == null) throw new WebApplicationException(Response.Status.UNAUTHORIZED);
-        if (kiezatlasWorkspace == null) getKiezatlasWorkspaceId();
-        if (!accessControlService.isMember(username, kiezatlasWorkspace.getId())) {
+        if (!isKiezatlasWorkspaceMember()) {
             throw new WebApplicationException(Response.Status.UNAUTHORIZED);
         }
     }
