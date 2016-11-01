@@ -7,6 +7,7 @@ import de.deepamehta.facets.FacetsService;
 import de.deepamehta.core.AssociationDefinition;
 import de.deepamehta.core.RelatedTopic;
 import de.deepamehta.core.Topic;
+import de.deepamehta.core.TopicType;
 import de.deepamehta.core.model.RelatedTopicModel;
 import de.deepamehta.core.model.TopicModel;
 import de.deepamehta.core.model.SimpleValue;
@@ -148,6 +149,24 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
                 ROLE_TYPE_FACET_TYPE, "dm4.core.topic_type");
         } catch (Exception e) {
             throw new RuntimeException("Finding the website's facet types failed (websiteId=" + websiteId + ")", e);
+        }
+    }
+
+    @GET
+    @Path("/{website_id}/facets/typedefs")
+    @Override
+    public List<TopicType> getFacetTopicTypes(@PathParam("website_id") long websiteId) {
+        try {
+            List<RelatedTopic> relatedFacetTypes = getFacetTypes(websiteId);
+            List<TopicType> facetTypes = new ArrayList<TopicType>();
+            for (RelatedTopic relatedFacet : relatedFacetTypes) {
+                TopicType facetType = dm4.getTopicType(relatedFacet.getUri());
+                facetType.loadChildTopics();
+                facetTypes.add(facetType);
+            }
+            return facetTypes;
+        } catch (Exception e) {
+            throw new RuntimeException("Finding the website's facet typeDefs failed (websiteId=" + websiteId + ")", e);
         }
     }
 
@@ -430,6 +449,12 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         return geoObject;
     }
 
+    @Override
+    public void updateFacets(long geoObjectId, List<RelatedTopic> facetTypes, TopicModel newModel) {
+        updateFacets(dm4.getTopic(geoObjectId), facetTypes, newModel);
+    }
+
+
 
     /** ------------------------------------------ Listener Implementations ------------------------------------ */
 
@@ -556,28 +581,32 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
      * @return  The facet types (as a result set, may be empty), or <code>null</code>.
      */
     private List<RelatedTopic> getFacetTypes() {
+        Topic website = null;
         Cookies cookies = Cookies.get();
-        if (!cookies.has("dm4_topicmap_id")) {
+        if (!cookies.has("dm4_topicmap_id") && !cookies.has("ka2_site_id")) {
             logger.fine("### Finding geo object facet types ABORTED -- topicmap is unknown (no \"dm4_topicmap_id\" " +
-                "cookie was sent)");
+                "and no \"ka2_site_id\" cookie was sent)");
             return null;
         }
         //
+        long websiteId = cookies.getLong("ka2_site_id");
         long topicmapId = cookies.getLong("dm4_topicmap_id");
-        if (!isGeomap(topicmapId)) {
-            logger.fine("### Finding geo object facet types for topicmap " + topicmapId + " ABORTED -- not a geomap");
+        if (websiteId == 0 && !isGeomap(topicmapId)) {
+            logger.fine("### Finding geo object facet types for websit e" + topicmapId + " ABORTED -- no geomap or ka2_site_id cookie detected");
             return null;
         }
-        //
-        Topic website = getWebsite(topicmapId);
+        if (websiteId > 0) { // use value in "ka2_site_id"
+            website = dm4.getTopic(websiteId);
+        } else { // use topicmap id cookie representing a geomap
+            website = getWebsite(topicmapId);
+        }
         if (website == null) {
-            logger.info("### Finding geo object facet types for geomap " + topicmapId + " ABORTED -- not part of a " +
-                "Kiezatlas website");
+            logger.info("### Finding geo object facet types  ABORTED -- no Kiezatlas website found");
             return null;
         }
-        //
-        logger.info("### Finding geo object facet types for geomap " + topicmapId);
-        return getFacetTypes(website.getId());
+        websiteId = website.getId();
+        logger.info("### Finding geo object facet types for website " + websiteId);
+        return getFacetTypes(websiteId);
     }
 
     private List<Topic> fetchGeoObjects(long geomapId) {

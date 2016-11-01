@@ -3,6 +3,8 @@ package de.kiezatlas;
 import de.deepamehta.core.Association;
 import de.deepamehta.core.RelatedTopic;
 import de.deepamehta.core.Topic;
+import de.deepamehta.core.TopicType;
+import de.deepamehta.core.model.TopicModel;
 import de.deepamehta.core.service.accesscontrol.SharingMode;
 import de.deepamehta.geomaps.model.GeoCoordinate;
 import java.util.List;
@@ -31,6 +33,11 @@ public interface KiezatlasService {
      * Returns the facet types assigned to the given Kiezatlas Website.
      */
     List<RelatedTopic> getFacetTypes(long websiteId);
+
+    /**
+     * Returns the facet type definitions assigned to the given Kiezatlas Website.
+     */
+    List<TopicType> getFacetTopicTypes(long websiteId);
 
     /**
      * Returns all Kiezatlas criteria existing in the DB. ### Experimental
@@ -85,6 +92,8 @@ public interface KiezatlasService {
     GeoCoordinate getGeoCoordinateByGeoObject(Topic geoObject);
 
     Topic enrichWithFacets(Topic geoObject, long websiteId);
+
+    void updateFacets(long geoObjectId, List<RelatedTopic> facetTypes, TopicModel model);
 
     /** Fetches the Geo Coordinate topic related to a Geo Objects Address (!) topic. */
     Topic getGeoCoordinateFacet(Topic address);
