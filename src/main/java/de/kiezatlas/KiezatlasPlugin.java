@@ -451,7 +451,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     @Override
     public void updateFacets(long geoObjectId, List<RelatedTopic> facetTypes, TopicModel newModel) {
-        updateFacets(dm4.getTopic(geoObjectId), facetTypes, newModel);
+        Topic geo = dm4.getTopic(geoObjectId);
+        updateFacets(geo, facetTypes, newModel);
     }
 
 
@@ -581,32 +582,28 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
      * @return  The facet types (as a result set, may be empty), or <code>null</code>.
      */
     private List<RelatedTopic> getFacetTypes() {
-        Topic website = null;
         Cookies cookies = Cookies.get();
-        if (!cookies.has("dm4_topicmap_id") && !cookies.has("ka2_site_id")) {
-            logger.fine("### Finding geo object facet types ABORTED -- topicmap is unknown (no \"dm4_topicmap_id\" " +
-                "and no \"ka2_site_id\" cookie was sent)");
+        if (!cookies.has("dm4_topicmap_id")) {
+            logger.info("### Finding geo object facet types ABORTED -- topicmap is unknown (no \"dm4_topicmap_id\" " +
+                "cookie was sent)");
             return null;
         }
         //
-        long websiteId = cookies.getLong("ka2_site_id");
         long topicmapId = cookies.getLong("dm4_topicmap_id");
-        if (websiteId == 0 && !isGeomap(topicmapId)) {
-            logger.fine("### Finding geo object facet types for websit e" + topicmapId + " ABORTED -- no geomap or ka2_site_id cookie detected");
+        if (!isGeomap(topicmapId)) {
+            logger.info("### Finding geo object facet types for topicmap " + topicmapId + " ABORTED -- not a geomap");
             return null;
         }
-        if (websiteId > 0) { // use value in "ka2_site_id"
-            website = dm4.getTopic(websiteId);
-        } else { // use topicmap id cookie representing a geomap
-            website = getWebsite(topicmapId);
-        }
+        //
+        Topic website = getWebsite(topicmapId);
         if (website == null) {
-            logger.info("### Finding geo object facet types  ABORTED -- no Kiezatlas website found");
+            logger.info("### Finding geo object facet types for geomap " + topicmapId + " ABORTED -- not part of a " +
+                "Kiezatlas website");
             return null;
         }
-        websiteId = website.getId();
-        logger.info("### Finding geo object facet types for website " + websiteId);
-        return getFacetTypes(websiteId);
+        //
+        logger.info("### Finding geo object facet types for geomap " + topicmapId);
+        return getFacetTypes(website.getId());
     }
 
     private List<Topic> fetchGeoObjects(long geomapId) {
