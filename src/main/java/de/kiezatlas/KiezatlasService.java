@@ -106,10 +106,25 @@ public interface KiezatlasService {
 
     List<RelatedTopic> getParentRelatedAggregatedGeoObjects(Topic bezirksFacet);
 
+    /**
+     * To be removed.
+     * @param facettedTopic
+     * @return 
+     */
     Topic getImageFileFacetByGeoObject(Topic facettedTopic);
 
+    /**
+     * To be removed.
+     * @param facettedTopic
+     * @return 
+     */
     void updateImageFileFacet(Topic geoObject, String imageFilePath);
 
+    /**
+     * To be removed.
+     * @param facettedTopic
+     * @return 
+     */
     Topic getFacettedBezirksregionChildTopic(Topic facettedTopic);
 
     /** String getGeoObjectAttribution(Topic geoObject); */

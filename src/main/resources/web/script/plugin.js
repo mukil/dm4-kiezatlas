@@ -123,3 +123,5 @@ dm4c.add_plugin("de.kiezatlas", function() {
         return topicmap.get_renderer_uri() == "dm4.geomaps.geomap_renderer"
     }
 })
+// Enable debugging for dynamically loaded scripts:
+//# sourceURL=kiezatlas_plugin.js
