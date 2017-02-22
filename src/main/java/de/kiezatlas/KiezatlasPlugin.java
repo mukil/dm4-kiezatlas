@@ -215,30 +215,6 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
             "dm4.core.parent", GEO_OBJECT);
     }
 
-    @Override
-    public GeoObjects searchGeoObjectNames(String searchTerm, long clock) {
-        GeoObjects result = new GeoObjects(clock);
-        // Note: Why do we assume (see documentat in KiezatlaService this is case-insensitive?
-        for (Topic geoObjectName : dm4.searchTopics("*" + searchTerm + "*", GEO_OBJECT_NAME)) {
-            result.add(getGeoObjectByNameTopic(geoObjectName));
-        }
-        return result;
-    }
-
-    @GET
-    @Path("/category/objects")
-    @Override
-    public GroupedGeoObjects searchCategories(@QueryParam("search") String searchTerm,
-            @QueryParam("clock") long clock) {
-        GroupedGeoObjects result = new GroupedGeoObjects(clock);
-        for (Topic criteria : getAllCriteria()) {
-            for (Topic category : dm4.searchTopics("*" + searchTerm + "*", criteria.getUri())) {
-                result.add(criteria, category, getGeoObjectsByCategory(category.getId()));
-            }
-        }
-        return result;
-    }
-
     @GET
     @Path("/user")
     public String getKiezatlasWorkspaceMember() {
@@ -252,6 +228,28 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         if (kiezatlasWorkspace != null) return kiezatlasWorkspace.getId();
         kiezatlasWorkspace = dm4.getTopicByUri(KIEZATLAS_WORKSPACE_URI);
         return kiezatlasWorkspace.getId();
+    }
+
+    @Override
+    public GeoObjects searchGeoObjectNames(String searchTerm, long clock) {
+        GeoObjects result = new GeoObjects(clock);
+        // Note: Why do we assume (see documentat in KiezatlaService this is case-insensitive?
+        for (Topic geoObjectName : dm4.searchTopics("*" + searchTerm + "*", GEO_OBJECT_NAME)) {
+            result.add(getGeoObjectByNameTopic(geoObjectName));
+        }
+        return result;
+    }
+
+    @Override
+    public GroupedGeoObjects searchCategories(@QueryParam("search") String searchTerm,
+            @QueryParam("clock") long clock) {
+        GroupedGeoObjects result = new GroupedGeoObjects(clock);
+        for (Topic criteria : getAllCriteria()) {
+            for (Topic category : dm4.searchTopics("*" + searchTerm + "*", criteria.getUri())) {
+                result.add(criteria, category, getGeoObjectsByCategory(category.getId()));
+            }
+        }
+        return result;
     }
 
     @Override
