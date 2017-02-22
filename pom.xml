@@ -35,11 +35,6 @@
         </dependency>
         <dependency>
             <groupId>de.deepamehta</groupId>
-            <artifactId>deepamehta-time</artifactId>
-            <version>4.8.3</version>
-        </dependency>
-        <dependency>
-            <groupId>de.deepamehta</groupId>
             <artifactId>deepamehta-accesscontrol</artifactId>
             <version>4.8.3</version>
         </dependency>

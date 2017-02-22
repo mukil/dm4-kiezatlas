@@ -20,7 +20,6 @@ import de.deepamehta.core.service.event.PostUpdateTopicListener;
 import de.deepamehta.core.service.event.PreSendTopicListener;
 import de.deepamehta.core.util.DeepaMehtaUtils;
 import de.deepamehta.geomaps.model.GeoCoordinate;
-import de.deepamehta.time.TimeService;
 import de.deepamehta.workspaces.WorkspacesService;
 
 import javax.ws.rs.*;
@@ -42,13 +41,7 @@ import javax.ws.rs.core.Response;
 public class KiezatlasPlugin extends PluginActivator implements KiezatlasService, PostUpdateTopicListener,
                                                                                   PreSendTopicListener {
 
-    // ------------------------------------------------------------------------------------------------------- Constants
-
-    // The URIs of KA2 Geo Object topics have this prefix.
-    // The remaining part of the URI is the original KA1 topic id.
-    public static final String KA2_GEO_OBJECT_URI_PREFIX = "de.kiezatlas.topic.";
-    public static final String GEO_OBJECT_OWNER_PROPERTY = "de.kiezatlas.owner";
-    public static final String GEO_OBJECT_KEYWORD_PROPERTY = "de.kiezatlas.key.";
+    // ------------------------------------------------------------------------------------------------------ Constants
 
     // Website-Geomap association
     private static final String WEBSITE_GEOMAP = "dm4.core.association";
@@ -62,11 +55,10 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     private static final String ROLE_TYPE_GEOOBJECT = "dm4.core.parent";
     private static final String ROLE_TYPE_SITE = "dm4.core.child";
 
-    // ---------------------------------------------------------------------------------------------- Instance Variables
+    // --------------------------------------------------------------------------------------------- Instance Variables
 
     @Inject private GeomapsService geomapsService;
     @Inject private FacetsService facetsService;
-    @Inject private TimeService timeService;
     @Inject private AccessControlService accessControlService;
     @Inject private WorkspacesService workspaceService;
 
@@ -74,11 +66,11 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     Topic kiezatlasWorkspace = null;
 
-    // -------------------------------------------------------------------------------------------------- Public Methods
+    // ------------------------------------------------------------------------------------------------- Public Methods
 
 
 
-    /** ------------------------------------------ Plugin Service --------------------------------------------- */
+    /** ----------------------------------------- Plugin Service --------------------------------------------- */
 
     /**
      * Useful to create a new or load an existing "Site" topic (by its uri).
@@ -177,8 +169,9 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         try {
             Topic site = dm4.getTopic(siteId);
             List<RelatedTopic> geoObjects = null;
-            if (site.getTypeUri().equals("ka2.website")) {
-                geoObjects = site.getRelatedTopics(WEBSITE_GEOOBJECT, ROLE_TYPE_SITE, ROLE_TYPE_GEOOBJECT, GEO_OBJECT);
+            if (site.getTypeUri().equals(WEBSITE)) {
+                geoObjects = site.getRelatedTopics(WEBSITE_GEOOBJECT, ROLE_TYPE_SITE,
+                    ROLE_TYPE_GEOOBJECT, GEO_OBJECT);
             }
             return geoObjects;
         } catch (Exception e) {
@@ -218,50 +211,19 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Path("/category/{id}/objects")
     @Override
     public List<RelatedTopic> getGeoObjectsByCategory(@PathParam("id") long categoryId) {
-        return dm4.getTopic(categoryId).getRelatedTopics("dm4.core.aggregation", "dm4.core.child", "dm4.core.parent",
-                GEO_OBJECT);
+        return dm4.getTopic(categoryId).getRelatedTopics("dm4.core.aggregation", "dm4.core.child",
+            "dm4.core.parent", GEO_OBJECT);
     }
 
-    /** Used by famportal editorial tool. */
-    @GET
-    @Path("/geoobject")
     @Override
-    public GeoObjects searchGeoObjectNames(@QueryParam("search") String searchTerm, @QueryParam("clock") long clock) {
+    public GeoObjects searchGeoObjectNames(String searchTerm, long clock) {
         GeoObjects result = new GeoObjects(clock);
+        // Note: Why do we assume (see documentat in KiezatlaService this is case-insensitive?
         for (Topic geoObjectName : dm4.searchTopics("*" + searchTerm + "*", GEO_OBJECT_NAME)) {
             result.add(getGeoObjectByNameTopic(geoObjectName));
         }
         return result;
     }
-
-    /** @PUT
-    @Path("/geoobject/attribution/{topicId}/{owner}")
-    @Transactional
-    @Consumes(MediaType.TEXT_PLAIN)
-    public Response createGeoObjectAttribution(@PathParam("topicId") long id,
-                                               @PathParam("owner") String owner, String key) {
-        checkAuthorization();
-        Topic geoObject = dm4.getTopic(id);
-        if (geoObject != null && !owner.isEmpty() && !key.isEmpty()) {
-            String value = owner.trim();
-            String keyValue = key.trim();
-            try {
-                String existingValue = (String) geoObject.getProperty(GEO_OBJECT_OWNER_PROPERTY);
-                logger.warning("Values already set: Updating not allowed, owner=" + existingValue);
-                return Response.status(405).build();
-            } catch (Exception e) {  // ### org.neo4j.graphdb.NotFoundException
-                geoObject.setProperty(GEO_OBJECT_OWNER_PROPERTY, value, true); // ### addToIndex=true?
-                geoObject.setProperty(GEO_OBJECT_KEYWORD_PROPERTY, keyValue, false);
-                logger.info("### Equipped \"" + geoObject.getSimpleValue() + "\" with owner=\"" + owner + "\" and " +
-                        "key=\"" + key + "\"");
-                return Response.status(200).build();
-            }
-        } else if (owner.isEmpty()){
-            logger.warning("Owner and/or key empty - Not allowed");
-            return Response.status(405).build();
-        }
-        return Response.status(404).build();
-    } **/
 
     @GET
     @Path("/category/objects")
@@ -337,31 +299,21 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         }
     }
 
-    /** ---------------------------------- Kiezatlas ETL Plugin Service Helper Methods ------------------------- */
-
-    /** Note: This facet depends on the installation of the dm4-kiezatlas-etl plugin. */
-    @Override
-    public Topic getImageFileFacetByGeoObject(Topic geoObject) {
-        return facetsService.getFacet(geoObject, "ka2.bild.facet");
-    }
-
-    /** Note: This facet depends on the installation of the dm4-kiezatlas-etl plugin. */
     @Override
     public void updateImageFileFacet(Topic geoObject, String imageFilePath) {
-        facetsService.updateFacet(geoObject, "ka2.bild.facet",
-            mf.newFacetValueModel("ka2.bild.pfad").put(imageFilePath));
+        facetsService.updateFacet(geoObject, IMAGE_FACET,
+            mf.newFacetValueModel(IMAGE_PATH).put(imageFilePath));
     }
 
-    /** This facet depends/just exists after installation of the dm4-kiezatlas-etl plugin. */
+    @Override
+    public Topic getImageFileFacetByGeoObject(Topic geoObject) {
+        return facetsService.getFacet(geoObject, IMAGE_FACET);
+    }
+
     @Override
     public Topic getFacettedBezirksregionChildTopic(Topic facettedTopic) {
-        // Note: Untested
-        return facetsService.getFacet(facettedTopic, "ka2.bezirksregion.facet");
+        return facetsService.getFacet(facettedTopic, BEZIRKSREGION_FACET);
     }
-
-
-
-    /** -------------------------------------- Kiezatlas Geo Object Helper Methods ----------------------------- */
 
     @Override
     public GeoCoordinate getGeoCoordinateByGeoObject(Topic geoObject) {
@@ -377,10 +329,10 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         Topic address = null, geoObject = null;
         try {
             address = geoCoords.getRelatedTopic("dm4.core.composition", "dm4.core.child",
-                "dm4.core.parent", "dm4.contacts.address");
+                "dm4.core.parent", GEO_OBJECT_ADDRESS);
             if (address != null) {
                 geoObject = address.getRelatedTopic("dm4.core.composition", "dm4.core.child",
-                    "dm4.core.parent", "ka2.geo_object");
+                    "dm4.core.parent", GEO_OBJECT);
             }
         } catch(RuntimeException ex) {
             logger.warning("Could not load Geo Object for Geo Coordinate (" + geoCoords
@@ -401,20 +353,16 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         return geoObject;
     }
 
-    /**
-     * @retrun A Geo Coordinate topic (including its child topics) of a geo-facetted topic (e.g. an Address),
-     * or <code>null</code> if no geo coordinate is stored.
-     */
     @Override
     public Topic getGeoCoordinateFacet(Topic addressTopic) {
-        Topic geoCoordTopic = facetsService.getFacet(addressTopic, "dm4.geomaps.geo_coordinate_facet");
+        Topic geoCoordTopic = facetsService.getFacet(addressTopic, GEO_COORDINATE_FACET);
         return geoCoordTopic != null ? geoCoordTopic.loadChildTopics() : null;
     }
 
     @Override
-    public List<RelatedTopic> getParentRelatedAggregatedGeoObjects(Topic bezirksFacet) {
+    public List<RelatedTopic> getAggregatingGeoObjects(Topic bezirksFacet) {
         return bezirksFacet.getRelatedTopics("dm4.core.aggregation", "dm4.core.child",
-            "dm4.core.parent", "ka2.geo_object");
+            "dm4.core.parent", GEO_OBJECT);
     }
 
     @Override
@@ -428,16 +376,6 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
         if (kiezatlasWorkspace == null) getKiezatlasWorkspaceId();
         return accessControlService.isMember(username, kiezatlasWorkspace.getId());
     }
-
-    /**
-     * @param geoObject
-     * @return A string representing information on the original owner of a kiezatlas 1 einrichtungs topic with two
-     * values seperated by a colon "owner:keyword".
-    @Override
-    public String getGeoObjectAttribution(Topic geoObject) {
-        return (String) geoObject.getProperty(GEO_OBJECT_OWNER_PROPERTY) + ":"
-            + (String) geoObject.getProperty(GEO_OBJECT_KEYWORD_PROPERTY);
-    } **/
 
     @Override
     public Topic enrichWithFacets(Topic geoObject, long websiteId) {
@@ -623,14 +561,6 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     }
 
     // ---
-
-    /** private void checkAuthorization() {
-        String username = accessControlService.getUsername();
-        if (username == null || username.isEmpty()) {
-            throw new WebApplicationException(Response.Status.UNAUTHORIZED);
-        }
-        logger.info("Request Authorized for \"" + username + "\"");
-    } */
 
     private boolean isAssignedToWebsite(Topic geoObject, long siteId) {
         List<RelatedTopic> sites = geoObject.getRelatedTopics(WEBSITE_GEOOBJECT, "dm4.core.parent",
