@@ -269,7 +269,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     public Association addGeoObjectToWebsite(Topic geoObject, Topic website) {
         Association relation = null;
         if (geoObject.getTypeUri().equals(GEO_OBJECT) && website.getTypeUri().equals(WEBSITE)) {
-            if (!isAssignedToWebsite(geoObject, website.getId())) {
+            if (!isAssignedToSite(geoObject, website.getId())) {
                 logger.info("ADDING Geo Object \"" + geoObject.getSimpleValue()
                     + "\" to Site \"" + website.getSimpleValue() + "\"");
                 relation = dm4.createAssociation(mf.newAssociationModel(WEBSITE_GEOOBJECT,
@@ -285,7 +285,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Override
     public void removeGeoObjectFromWebsite(Topic geoObject, Topic website) {
         if (geoObject.getTypeUri().equals(GEO_OBJECT) && website.getTypeUri().equals(WEBSITE)) {
-            if (isAssignedToWebsite(geoObject, website.getId())) {
+            if (isAssignedToSite(geoObject, website.getId())) {
                 logger.info("REMOVING Geo Object \"" + geoObject.getSimpleValue()
                     + "\" from Site \"" + website.getSimpleValue() + "\"");
                 Association assignment = dm4.getAssociation(WEBSITE_GEOOBJECT, geoObject.getId(), website.getId(),
@@ -295,22 +295,6 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
                 logger.info("Skipping removal of Geo Object from Site, Assignment does not EXIST");
             }
         }
-    }
-
-    @Override
-    public void updateImageFileFacet(Topic geoObject, String imageFilePath) {
-        facetsService.updateFacet(geoObject, IMAGE_FACET,
-            mf.newFacetValueModel(IMAGE_PATH).put(imageFilePath));
-    }
-
-    @Override
-    public Topic getImageFileFacetByGeoObject(Topic geoObject) {
-        return facetsService.getFacet(geoObject, IMAGE_FACET);
-    }
-
-    @Override
-    public Topic getFacettedBezirksregionChildTopic(Topic facettedTopic) {
-        return facetsService.getFacet(facettedTopic, BEZIRKSREGION_FACET);
     }
 
     @Override
@@ -365,7 +349,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     @Override
     public boolean isAssignedToKiezatlasWebsite(Topic geoObject, Topic website) {
-        return isAssignedToWebsite(geoObject, website.getId());
+        return isAssignedToSite(geoObject, website.getId());
     }
 
     @Override
@@ -560,7 +544,7 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     // ---
 
-    private boolean isAssignedToWebsite(Topic geoObject, long siteId) {
+    private boolean isAssignedToSite(Topic geoObject, long siteId) {
         List<RelatedTopic> sites = geoObject.getRelatedTopics(WEBSITE_GEOOBJECT, "dm4.core.parent",
             "dm4.core.child", WEBSITE);
         for (RelatedTopic site : sites) {

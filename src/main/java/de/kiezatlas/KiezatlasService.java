@@ -182,28 +182,4 @@ public interface KiezatlasService {
     /** Fetches the Geo Object for any of its aggregated childs. */
     List<RelatedTopic> getAggregatingGeoObjects(Topic bezirksFacet);
 
-    /**
-     * Loads a "ka2.bild.facet" related to the given Geo Object.
-     * 
-     * @param facettedTopic
-     * @return A topic containin the images filepath or <code>null</code> if no "Bild" facet is related to the Geo Object.
-     */
-    Topic getImageFileFacetByGeoObject(Topic facettedTopic);
-
-    /**
-     * Writes a filepath value into the "ka2.bild.facet" related facet for the given Geo Object.
-     * 
-     * @param geoObject Topic   A Geo Object topic.
-     * @param imageFilePath String  The filepath relative to the respective filerepo.
-     */
-    void updateImageFileFacet(Topic geoObject, String imageFilePath);
-
-    /**
-     * Loads the topic representing the "ka2.bezirksregion" the Geo Object is assigned to.
-     * 
-     * @param facettedTopic
-     * @return A topic representing the bezirksregion or <code>null</code> if no "ka2.bezirksregion" facet is related to the Geo Object.
-     */
-    Topic getFacettedBezirksregionChildTopic(Topic facettedTopic);
-
 }
