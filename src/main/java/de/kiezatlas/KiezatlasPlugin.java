@@ -234,7 +234,9 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     public GeoObjects searchGeoObjectNames(String searchTerm, long clock) {
         GeoObjects result = new GeoObjects(clock);
         // Note: Why do we assume (see documentat in KiezatlaService this is case-insensitive?
-        for (Topic geoObjectName : dm4.searchTopics("*" + searchTerm + "*", GEO_OBJECT_NAME)) {
+        String queryPhrase = "*" + searchTerm + "*";
+        logger.info("Kiezatlas Geo Object Search by Name \"" + queryPhrase + "\"");
+        for (Topic geoObjectName : dm4.searchTopics(queryPhrase, GEO_OBJECT_NAME)) {
             result.add(getGeoObjectByNameTopic(geoObjectName));
         }
         return result;
