@@ -224,7 +224,8 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     @GET
     @Path("/workspace")
-    public long getKiezatlasWorkspaceId() {
+    @Override
+    public long getStandardWorkspaceId() {
         if (kiezatlasWorkspace != null) return kiezatlasWorkspace.getId();
         kiezatlasWorkspace = dm4.getTopicByUri(KIEZATLAS_WORKSPACE_URI);
         return kiezatlasWorkspace.getId();
@@ -301,10 +302,15 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
 
     @Override
     public GeoCoordinate getGeoCoordinateByGeoObject(Topic geoObject) {
-        Topic addressTopic = geoObject.getChildTopics().getTopic(GEO_OBJECT_ADDRESS);
-        if (addressTopic != null) return geomapsService.getGeoCoordinate(addressTopic);
-        logger.warning("Geo Coordinate could not be determined becuase no Address is related to Geo Object: "
-            + geoObject.getSimpleValue());
+        Topic addressTopic = null;
+        try {
+            addressTopic = geoObject.getChildTopics().getTopic(GEO_OBJECT_ADDRESS);
+            if (addressTopic != null) return geomapsService.getGeoCoordinate(addressTopic);
+        } catch(RuntimeException ex) {
+            logger.warning("Could not find geo coordinate, most probably due to a missing address child topic on \""
+                + geoObject.getSimpleValue() + "\"");
+            return null;
+        }
         return null;
     }
 
@@ -357,8 +363,14 @@ public class KiezatlasPlugin extends PluginActivator implements KiezatlasService
     @Override
     public boolean isKiezatlasWorkspaceMember() {
         String username = accessControlService.getUsername();
-        if (kiezatlasWorkspace == null) getKiezatlasWorkspaceId();
+        if (kiezatlasWorkspace == null) getStandardWorkspaceId();
         return accessControlService.isMember(username, kiezatlasWorkspace.getId());
+    }
+
+    @Override
+    public boolean isKiezatlasWorkspaceMember(Topic username) {
+        if (kiezatlasWorkspace == null) getStandardWorkspaceId();
+        return accessControlService.isMember(username.getSimpleValue().toString(), kiezatlasWorkspace.getId());
     }
 
     @Override

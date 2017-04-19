@@ -136,10 +136,19 @@ public interface KiezatlasService {
 
     /**
      * Utility method to check if the requesting user is a member of the "Kiezatlas" workspace.
-     * 
-     * @return 
+     *
+     * @return boolean True if username is a member of the Kiezatlas "Standard" Workspace.
      */
     boolean isKiezatlasWorkspaceMember();
+
+    long getStandardWorkspaceId();
+
+    /**
+     * Utility method to check if the requesting user is a member of the "Kiezatlas" workspace.
+     *
+     * @return boolean True if username is a member of the Kiezatlas "Standard" Workspace.
+     */
+    boolean isKiezatlasWorkspaceMember(Topic username);
 
     /**
      * Fetches the "Geo Coordinate" facet related to the given Geo Object.
